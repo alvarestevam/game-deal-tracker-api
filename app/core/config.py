@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_PORT: str = "5432"
 
+    GAMERPOWER_BASE_URL: str = "https://www.gamerpower.com/api"
+    CHEAPSHARK_BASE_URL: str = "https://www.cheapshark.com/api/1.0"
+    ITAD_BASE_URL: str = "https://api.isthereanydeal.com"
+    ITAD_API_KEY: str = ""
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
