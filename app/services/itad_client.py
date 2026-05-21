@@ -10,16 +10,35 @@ class ITADClient:
         self.base_url = settings.ITAD_BASE_URL
         self.api_key = settings.ITAD_API_KEY
 
+    async def get_game_id_by_title(self, title: str) -> Optional[str]:
+        """
+        Searches for a game by title and returns its internal ITAD ID.
+        Endpoint: /games/search/v1
+        """
+        url = f"{self.base_url}/games/search/v1"
+        params = {"key": self.api_key, "title": title}
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, params=params, timeout=10.0)
+                response.raise_for_status()
+                data = response.json()
+
+                if isinstance(data, list) and len(data) > 0:
+                    # Return the first match's ID
+                    return data[0].get("id")
+
+                return None
+        except Exception as e:
+            logger.error(f"Error searching game ID on ITAD: {str(e)}")
+            return None
+
     async def get_historical_low(self, game_id: str) -> Optional[float]:
         """
-        In ITAD API v2, we first need the internal ITAD game ID if not provided,
-        but assuming game_id is the ITAD ID for this implementation.
+        Retrieves the historical low price for a game by its ID.
         Endpoint: /history/low/v1
         """
         url = f"{self.base_url}/history/low/v1"
-        # ITAD v2 often requires POST for some endpoints, let's check common patterns.
-        # Based on docs snippet: postHistory Low
-
         params = {"key": self.api_key}
         payload = [game_id]
 
