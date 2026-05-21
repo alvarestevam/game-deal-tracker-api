@@ -19,8 +19,9 @@ class ITADClient:
         params = {"key": self.api_key, "title": title}
 
         try:
+            headers = {"User-Agent": "GameDealTracker/1.0 (contato@teste.com)"}
             async with httpx.AsyncClient() as client:
-                response = await client.get(url, params=params, timeout=10.0)
+                response = await client.get(url, params=params, headers=headers, timeout=10.0)
                 response.raise_for_status()
                 data = response.json()
 
@@ -43,8 +44,9 @@ class ITADClient:
         payload = [game_id]
 
         try:
+            headers = {"User-Agent": "GameDealTracker/1.0 (contato@teste.com)"}
             async with httpx.AsyncClient() as client:
-                response = await client.post(url, params=params, json=payload, timeout=10.0)
+                response = await client.post(url, params=params, json=payload, headers=headers, timeout=10.0)
                 response.raise_for_status()
                 data = response.json()
 

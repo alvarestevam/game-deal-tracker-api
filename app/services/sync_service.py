@@ -9,25 +9,22 @@ from app.services.cheapshark_client import CheapSharkClient
 logger = logging.getLogger(__name__)
 
 async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool):
-    try:
-        result = await session.execute(select(Game).where(Game.title == title))
-        game = result.scalars().first()
+    result = await session.execute(select(Game).where(Game.title == title))
+    game = result.scalars().first()
 
-        if game:
-            game.current_price = price
-            game.is_free = is_free
-            if price < game.historical_low:
-                game.historical_low = price
-        else:
-            new_game = Game(
-                title=title,
-                current_price=price,
-                historical_low=price,
-                is_free=is_free
-            )
-            session.add(new_game)
-    except Exception as e:
-        logger.error(f"Error upserting game {title}: {str(e)}")
+    if game:
+        game.current_price = price
+        game.is_free = is_free
+        if price < game.historical_low:
+            game.historical_low = price
+    else:
+        new_game = Game(
+            title=title,
+            current_price=price,
+            historical_low=price,
+            is_free=is_free
+        )
+        session.add(new_game)
 
 async def sync_games():
     logger.info("Starting game synchronization...")
@@ -39,15 +36,20 @@ async def sync_games():
         deals = await cs_client.get_deals()
 
         async with AsyncSessionLocal() as session:
-            # Process giveaways
-            for item in giveaways:
-                await upsert_game(session, item.title, item.sale_price, True)
+            try:
+                # Process giveaways
+                for item in giveaways:
+                    await upsert_game(session, item.title, item.sale_price, True)
 
-            # Process deals
-            for item in deals:
-                await upsert_game(session, item.title, item.sale_price, item.sale_price == 0)
+                # Process deals
+                for item in deals:
+                    await upsert_game(session, item.title, item.sale_price, item.sale_price == 0)
 
-            await session.commit()
-        logger.info("Game synchronization completed successfully.")
+                await session.commit()
+                logger.info("Game synchronization completed successfully.")
+            except Exception as e:
+                await session.rollback()
+                logger.error(f"Database error during synchronization: {str(e)}")
+                raise
     except Exception as e:
         logger.error(f"Error during game synchronization: {str(e)}")
