@@ -17,8 +17,9 @@ class CheapSharkClient:
             params["lowerPrice"] = lower_price
 
         try:
+            headers = {"User-Agent": "GameDealTracker/1.0 (contato@teste.com)"}
             async with httpx.AsyncClient() as client:
-                response = await client.get(url, params=params, timeout=10.0)
+                response = await client.get(url, params=params, headers=headers, timeout=10.0)
                 response.raise_for_status()
                 deals = response.json()
 
