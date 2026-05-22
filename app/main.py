@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.api.v1.health import router as health_router
 from app.api.v1.games import router as games_router
@@ -25,6 +26,14 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(health_router, prefix=settings.API_V1_STR)
 app.include_router(games_router, prefix=settings.API_V1_STR)
