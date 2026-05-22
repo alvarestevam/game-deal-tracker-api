@@ -23,7 +23,7 @@ async def get_deals(db: AsyncSession = Depends(get_db)):
 @router.get("/games/{title}/audit", response_model=GameAuditResponse)
 async def audit_game(title: str, db: AsyncSession = Depends(get_db)):
     # Find game in DB
-    result = await db.execute(select(Game).where(Game.title == title))
+    result = await db.execute(select(Game).where(Game.title.ilike(f"%{title}%")))
     game = result.scalars().first()
 
     if not game:
