@@ -5,7 +5,6 @@ from typing import List
 from app.core.database import get_db
 from app.models.game import Game
 from app.schemas.game import GameResponse, GameAuditResponse
-from app.services.itad_client import ITADClient
 
 router = APIRouter()
 
@@ -29,27 +28,9 @@ async def audit_game(title: str, db: AsyncSession = Depends(get_db)):
     if not game:
         raise HTTPException(status_code=404, detail="Game not found in database")
 
-    # Real-time ITAD check
-    itad_client = ITADClient()
-    itad_id = await itad_client.get_game_id_by_title(title)
-
-    if not itad_id:
-        # Fallback to DB historical low if ITAD search fails
-        return GameAuditResponse(
-            title=game.title,
-            current_price=game.current_price,
-            historical_low=game.historical_low,
-            is_historical_low=game.current_price <= game.historical_low
-        )
-
-    itad_low = await itad_client.get_historical_low(itad_id)
-
-    if itad_low is None:
-        itad_low = game.historical_low
-
     return GameAuditResponse(
         title=game.title,
         current_price=game.current_price,
-        historical_low=itad_low,
-        is_historical_low=game.current_price <= itad_low
+        historical_low=game.historical_low,
+        is_historical_low=game.current_price <= game.historical_low
     )
