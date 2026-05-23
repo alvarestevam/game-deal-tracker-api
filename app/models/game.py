@@ -13,4 +13,6 @@ class Game(Base):
     current_price: Mapped[float] = mapped_column(Float)
     historical_low: Mapped[float] = mapped_column(Float)
     is_free: Mapped[bool] = mapped_column(Boolean, default=False)
+    store_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    deal_url: Mapped[str | None] = mapped_column(String, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
