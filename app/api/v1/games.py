@@ -32,5 +32,7 @@ async def audit_game(title: str, db: AsyncSession = Depends(get_db)):
         title=game.title,
         current_price=game.current_price,
         historical_low=game.historical_low,
-        is_historical_low=game.current_price <= game.historical_low
+        is_historical_low=game.current_price <= game.historical_low,
+        store_name=game.store_name,
+        deal_url=game.deal_url
     )
