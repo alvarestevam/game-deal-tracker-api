@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 class GameDealSchema(BaseModel):
     title: str
@@ -11,3 +12,5 @@ class GameDealSchema(BaseModel):
     url: str
     is_giveaway: bool = False
     historical_low: Optional[float] = None
+    promo_start_date: Optional[datetime] = None
+    promo_end_date: Optional[datetime] = None

@@ -8,7 +8,7 @@ from app.services.cheapshark_client import CheapSharkClient
 
 logger = logging.getLogger(__name__)
 
-async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None):
+async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None):
     result = await session.execute(select(Game).where(Game.title == title))
     game = result.scalars().first()
 
@@ -17,6 +17,8 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
         game.is_free = is_free
         game.store_name = store_name
         game.deal_url = deal_url
+        game.promo_start_date = promo_start_date
+        game.promo_end_date = promo_end_date
         if price < game.historical_low:
             game.historical_low = price
     else:
@@ -26,7 +28,9 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
             historical_low=price,
             is_free=is_free,
             store_name=store_name,
-            deal_url=deal_url
+            deal_url=deal_url,
+            promo_start_date=promo_start_date,
+            promo_end_date=promo_end_date
         )
         session.add(new_game)
 
@@ -43,11 +47,11 @@ async def sync_games():
             try:
                 # Process giveaways
                 for item in giveaways:
-                    await upsert_game(session, item.title, item.sale_price, True, item.store, item.url)
+                    await upsert_game(session, item.title, item.sale_price, True, item.store, item.url, item.promo_start_date, item.promo_end_date)
 
                 # Process deals
                 for item in deals:
-                    await upsert_game(session, item.title, item.sale_price, item.sale_price == 0, item.store, item.url)
+                    await upsert_game(session, item.title, item.sale_price, item.sale_price == 0, item.store, item.url, item.promo_start_date, item.promo_end_date)
 
                 await session.commit()
                 logger.info("Game synchronization completed successfully.")

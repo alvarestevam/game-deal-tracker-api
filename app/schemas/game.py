@@ -10,6 +10,8 @@ class GameResponse(BaseModel):
     is_free: bool
     store_name: str | None = None
     deal_url: str | None = None
+    promo_start_date: datetime | None = None
+    promo_end_date: datetime | None = None
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -21,3 +23,5 @@ class GameAuditResponse(BaseModel):
     is_historical_low: bool
     store_name: str | None = None
     deal_url: str | None = None
+    promo_start_date: datetime | None = None
+    promo_end_date: datetime | None = None
