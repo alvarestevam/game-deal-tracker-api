@@ -1,5 +1,6 @@
 import httpx
 import logging
+from datetime import datetime
 from typing import List, Optional
 from app.core.config import settings
 from app.schemas.game_deal import GameDealSchema
@@ -30,6 +31,14 @@ class CheapSharkClient:
                 for item in deals:
                     deal_rating = float(item.get("dealRating", 0))
                     if deal_rating > 8.0:
+                        last_change = item.get("lastChange")
+                        promo_start_date = None
+                        if last_change:
+                            try:
+                                promo_start_date = datetime.fromtimestamp(int(last_change))
+                            except (ValueError, TypeError):
+                                pass
+
                         result.append(
                             GameDealSchema(
                                 title=item.get("title"),
@@ -38,7 +47,8 @@ class CheapSharkClient:
                                 store=str(item.get("storeID")), # Store ID from CheapShark
                                 deal_rating=deal_rating,
                                 deal_id=item.get("dealID"),
-                                url=f"https://www.cheapshark.com/redirect?dealID={item.get('dealID')}"
+                                url=f"https://www.cheapshark.com/redirect?dealID={item.get('dealID')}",
+                                promo_start_date=promo_start_date
                             )
                         )
                 return result

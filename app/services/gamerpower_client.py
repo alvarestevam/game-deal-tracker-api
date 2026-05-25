@@ -1,5 +1,6 @@
 import httpx
 import logging
+from datetime import datetime
 from typing import List
 from app.core.config import settings
 from app.schemas.game_deal import GameDealSchema
@@ -25,17 +26,38 @@ class GamerPowerClient:
                 if not isinstance(giveaways, list):
                     return []
 
-                return [
-                    GameDealSchema(
-                        title=item.get("title"),
-                        sale_price=0.0,
-                        store=item.get("platforms"),
-                        url=item.get("open_giveaway_url"),
-                        is_giveaway=True,
-                        deal_id=str(item.get("id"))
+                result = []
+                for item in giveaways:
+                    published_date_str = item.get("published_date")
+                    end_date_str = item.get("end_date")
+
+                    promo_start_date = None
+                    if published_date_str:
+                        try:
+                            promo_start_date = datetime.strptime(published_date_str, "%Y-%m-%d %H:%M:%S")
+                        except (ValueError, TypeError):
+                            pass
+
+                    promo_end_date = None
+                    if end_date_str and end_date_str != "N/A":
+                        try:
+                            promo_end_date = datetime.strptime(end_date_str, "%Y-%m-%d %H:%M:%S")
+                        except (ValueError, TypeError):
+                            pass
+
+                    result.append(
+                        GameDealSchema(
+                            title=item.get("title"),
+                            sale_price=0.0,
+                            store=item.get("platforms"),
+                            url=item.get("open_giveaway_url"),
+                            is_giveaway=True,
+                            deal_id=str(item.get("id")),
+                            promo_start_date=promo_start_date,
+                            promo_end_date=promo_end_date
+                        )
                     )
-                    for item in giveaways
-                ]
+                return result
         except httpx.HTTPStatusError as e:
             logger.error(f"GamerPower API error: {e.response.status_code} - {e.response.text}")
             return []
