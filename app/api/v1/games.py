@@ -10,20 +10,56 @@ router = APIRouter()
 
 @router.get("/giveaways", response_model=List[GameResponse])
 async def get_giveaways(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Game).where(Game.is_free == True))
-    return result.scalars().all()
+    result = await db.execute(
+        select(
+            Game.id,
+            Game.title,
+            Game.current_price,
+            Game.historical_low,
+            Game.is_free,
+            Game.store_name,
+            Game.deal_url,
+            Game.promo_start_date,
+            Game.promo_end_date,
+            Game.updated_at
+        ).where(Game.is_free == True)
+    )
+    return result.all()
 
 @router.get("/deals", response_model=List[GameResponse])
 async def get_deals(db: AsyncSession = Depends(get_db)):
     # Sorted from lowest price (greatest discount) to highest
-    result = await db.execute(select(Game).order_by(Game.current_price.asc()))
-    return result.scalars().all()
+    result = await db.execute(
+        select(
+            Game.id,
+            Game.title,
+            Game.current_price,
+            Game.historical_low,
+            Game.is_free,
+            Game.store_name,
+            Game.deal_url,
+            Game.promo_start_date,
+            Game.promo_end_date,
+            Game.updated_at
+        ).order_by(Game.current_price.asc())
+    )
+    return result.all()
 
 @router.get("/games/{title}/audit", response_model=GameAuditResponse)
 async def audit_game(title: str, db: AsyncSession = Depends(get_db)):
     # Find game in DB
-    result = await db.execute(select(Game).where(Game.title.ilike(f"%{title}%")))
-    game = result.scalars().first()
+    result = await db.execute(
+        select(
+            Game.title,
+            Game.current_price,
+            Game.historical_low,
+            Game.store_name,
+            Game.deal_url,
+            Game.promo_start_date,
+            Game.promo_end_date
+        ).where(Game.title.ilike(f"%{title}%"))
+    )
+    game = result.first()
 
     if not game:
         raise HTTPException(status_code=404, detail="Game not found in database")
@@ -34,5 +70,7 @@ async def audit_game(title: str, db: AsyncSession = Depends(get_db)):
         historical_low=game.historical_low,
         is_historical_low=game.current_price <= game.historical_low,
         store_name=game.store_name,
-        deal_url=game.deal_url
+        deal_url=game.deal_url,
+        promo_start_date=game.promo_start_date,
+        promo_end_date=game.promo_end_date
     )
