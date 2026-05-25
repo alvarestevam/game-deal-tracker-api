@@ -1,15 +1,28 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
 from app.core.database import get_db
 from app.models.game import Game
 from app.schemas.game import GameResponse, GameAuditResponse
+from app.services.sync_service import sync_games
+from app.core.limiter import limiter
 
 router = APIRouter()
 
+@router.post("/sync")
+@limiter.limit("5/minute")
+async def manual_sync(request: Request):
+    # This route will be protected by the global API key dependency in main.py
+    # and will have a stricter rate limit
+    try:
+        await sync_games()
+        return {"message": "Sincronização iniciada com sucesso"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro na sincronização: {str(e)}")
+
 @router.get("/giveaways", response_model=List[GameResponse])
-async def get_giveaways(db: AsyncSession = Depends(get_db)):
+async def get_giveaways(request: Request, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(
             Game.id,
@@ -27,7 +40,7 @@ async def get_giveaways(db: AsyncSession = Depends(get_db)):
     return result.all()
 
 @router.get("/deals", response_model=List[GameResponse])
-async def get_deals(db: AsyncSession = Depends(get_db)):
+async def get_deals(request: Request, db: AsyncSession = Depends(get_db)):
     # Sorted from lowest price (greatest discount) to highest
     result = await db.execute(
         select(
@@ -46,7 +59,7 @@ async def get_deals(db: AsyncSession = Depends(get_db)):
     return result.all()
 
 @router.get("/games/{title}/audit", response_model=GameAuditResponse)
-async def audit_game(title: str, db: AsyncSession = Depends(get_db)):
+async def audit_game(request: Request, title: str, db: AsyncSession = Depends(get_db)):
     # Find game in DB
     result = await db.execute(
         select(

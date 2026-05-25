@@ -1,13 +1,21 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from app.api.v1.health import router as health_router
 from app.api.v1.games import router as games_router
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.models.game import Game
 from app.services.sync_service import sync_games
+from app.core.limiter import limiter
+
+async def verify_api_key(x_api_key: str | None = Header(None)):
+    if not x_api_key or x_api_key != settings.API_KEY:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,7 +33,21 @@ async def lifespan(app: FastAPI):
     # Shutdown: Stop APScheduler
     scheduler.shutdown()
 
-app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+# Ocultar documentação em produção
+docs_url = "/docs" if settings.ENV != "production" else None
+redoc_url = "/redoc" if settings.ENV != "production" else None
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    lifespan=lifespan,
+    docs_url=docs_url,
+    redoc_url=redoc_url
+)
+
+# Integrar slowapi
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,8 +58,13 @@ app.add_middleware(
 )
 
 app.include_router(health_router, prefix=settings.API_V1_STR)
-app.include_router(games_router, prefix=settings.API_V1_STR)
+app.include_router(
+    games_router,
+    prefix=settings.API_V1_STR,
+    dependencies=[Depends(verify_api_key)]
+)
 
 @app.get("/")
-async def root():
+@limiter.limit("60/minute")
+async def root(request: Request):
     return {"message": "Welcome to GameDeal Tracker API"}
