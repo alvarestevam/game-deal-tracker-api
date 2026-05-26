@@ -63,7 +63,7 @@ async def get_deals(request: Request, db: AsyncSession = Depends(get_db)):
     )
     return result.all()
 
-@router.get("/games/{title}/audit", response_model=GameAuditResponse)
+@router.get("/games/{title}/audit", response_model=List[GameAuditResponse])
 async def audit_game(request: Request, title: str, db: AsyncSession = Depends(get_db)):
     # Find game in DB
     result = await db.execute(
@@ -77,18 +77,20 @@ async def audit_game(request: Request, title: str, db: AsyncSession = Depends(ge
             Game.promo_end_date
         ).where(Game.title.ilike(f"%{title}%"))
     )
-    game = result.first()
+    games = result.all()
 
-    if not game:
+    if not games:
         raise HTTPException(status_code=404, detail="Game not found in database")
 
-    return GameAuditResponse(
-        title=game.title,
-        current_price=game.current_price,
-        historical_low=game.historical_low,
-        is_historical_low=game.current_price <= game.historical_low,
-        store_name=game.store_name,
-        deal_url=game.deal_url,
-        promo_start_date=game.promo_start_date,
-        promo_end_date=game.promo_end_date
-    )
+    return [
+        GameAuditResponse(
+            title=game.title,
+            current_price=game.current_price,
+            historical_low=game.historical_low,
+            is_historical_low=game.current_price <= game.historical_low,
+            store_name=game.store_name,
+            deal_url=game.deal_url,
+            promo_start_date=game.promo_start_date,
+            promo_end_date=game.promo_end_date
+        ) for game in games
+    ]
