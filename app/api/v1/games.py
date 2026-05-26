@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
 from app.core.database import get_db
+from app.core.config import settings
 from app.models.game import Game
 from app.schemas.game import GameResponse, GameAuditResponse
 from app.services.sync_service import sync_games
@@ -10,7 +11,11 @@ from app.core.limiter import limiter
 
 router = APIRouter()
 
-@router.post("/sync")
+async def verify_sync_key(x_sync_api_key: str = Header(...)):
+    if x_sync_api_key != settings.SYNC_API_KEY:
+        raise HTTPException(status_code=401, detail="Sync API Key inválida ou ausente")
+
+@router.post("/sync", dependencies=[Depends(verify_sync_key)])
 @limiter.limit("5/minute")
 async def manual_sync(request: Request):
     # This route will be protected by the global API key dependency in main.py
