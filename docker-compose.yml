@@ -21,8 +21,6 @@ services:
     build: .
     volumes:
       - .:/app
-    ports:
-      - "8000:8000"
     environment:
       - POSTGRES_SERVER=db
       - POSTGRES_USER=postgres
@@ -32,5 +30,20 @@ services:
       db:
         condition: service_healthy
 
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:
