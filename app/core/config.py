@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     API_KEY: str = "dev-key-123"
+    SYNC_API_KEY: str = "admin-sync-key-123"
     ENV: str = "development"
 
     POSTGRES_SERVER: str
