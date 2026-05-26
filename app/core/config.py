@@ -4,6 +4,9 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "GameDeal Tracker API"
     API_V1_STR: str = "/api/v1"
 
+    API_KEY: str = "dev-key-123"
+    ENV: str = "development"
+
     POSTGRES_SERVER: str
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
