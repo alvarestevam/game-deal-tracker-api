@@ -40,6 +40,7 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
         game.promo_start_date = promo_start_date
         game.promo_end_date = promo_end_date
         game.is_active = is_active
+        # Atualiza image_url vinda do payload (thumb no CheapShark / image no GamerPower)
         game.image_url = image_url
 
         # Atualiza o historical_low comparando o valor atual no DB com o do payload e o novo preço
@@ -63,6 +64,7 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
             promo_start_date=promo_start_date,
             promo_end_date=promo_end_date,
             is_active=is_active,
+            # Persiste image_url vinda do payload
             image_url=image_url
         )
         session.add(new_game)
