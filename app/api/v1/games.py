@@ -40,6 +40,7 @@ async def get_giveaways(request: Request, db: AsyncSession = Depends(get_db)):
             Game.promo_start_date,
             Game.promo_end_date,
             Game.is_active,
+            Game.image_url,
             Game.updated_at
         ).where(Game.is_free == True, Game.is_active == True)
     )
@@ -60,6 +61,7 @@ async def get_deals(request: Request, db: AsyncSession = Depends(get_db)):
             Game.promo_start_date,
             Game.promo_end_date,
             Game.is_active,
+            Game.image_url,
             Game.updated_at
         ).where(Game.is_active == True).order_by(Game.current_price.asc())
     )
@@ -77,7 +79,8 @@ async def audit_game(request: Request, title: str, db: AsyncSession = Depends(ge
             Game.deal_url,
             Game.promo_start_date,
             Game.promo_end_date,
-            Game.is_active
+            Game.is_active,
+            Game.image_url
         ).where(Game.title.ilike(f"%{title}%"))
     )
     games = result.all()
@@ -95,6 +98,7 @@ async def audit_game(request: Request, title: str, db: AsyncSession = Depends(ge
             deal_url=game.deal_url,
             promo_start_date=game.promo_start_date,
             promo_end_date=game.promo_end_date,
-            is_active=game.is_active
+            is_active=game.is_active,
+            image_url=game.image_url
         ) for game in games
     ]
