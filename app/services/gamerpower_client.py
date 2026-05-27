@@ -54,7 +54,8 @@ class GamerPowerClient:
                             is_giveaway=True,
                             deal_id=str(item.get("id")),
                             promo_start_date=promo_start_date,
-                            promo_end_date=promo_end_date
+                            promo_end_date=promo_end_date,
+                            image_url=item.get("image")
                         )
                     )
                 return result

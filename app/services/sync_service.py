@@ -24,7 +24,7 @@ async def get_usd_brl_rate() -> float:
         logger.error(f"Erro ao obter cotação do dólar: {str(e)}. Usando fallback de 5.50.")
         return 5.50
 
-async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None, is_active: bool = True, usd_rate: float | None = None, payload_historical_low: float | None = None):
+async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None, is_active: bool = True, usd_rate: float | None = None, payload_historical_low: float | None = None, image_url: str | None = None):
     # Converte o preço e o historical_low do payload se uma taxa for fornecida (vinda do CheapShark)
     actual_price = round(price * usd_rate, 2) if usd_rate else price
     actual_payload_low = round(payload_historical_low * usd_rate, 2) if payload_historical_low and usd_rate else payload_historical_low
@@ -40,6 +40,7 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
         game.promo_start_date = promo_start_date
         game.promo_end_date = promo_end_date
         game.is_active = is_active
+        game.image_url = image_url
 
         # Atualiza o historical_low comparando o valor atual no DB com o do payload e o novo preço
         candidates = [game.historical_low, actual_price]
@@ -61,7 +62,8 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
             deal_url=deal_url,
             promo_start_date=promo_start_date,
             promo_end_date=promo_end_date,
-            is_active=is_active
+            is_active=is_active,
+            image_url=image_url
         )
         session.add(new_game)
 
@@ -84,7 +86,7 @@ async def sync_games():
 
                 # Process giveaways
                 for item in giveaways:
-                    await upsert_game(session, item.title, item.sale_price, True, item.store, item.url, item.promo_start_date, item.promo_end_date, is_active=True)
+                    await upsert_game(session, item.title, item.sale_price, True, item.store, item.url, item.promo_start_date, item.promo_end_date, is_active=True, image_url=item.image_url)
 
                 # Process deals
                 for item in deals:
@@ -100,7 +102,8 @@ async def sync_games():
                         item.promo_end_date,
                         is_active=True,
                         usd_rate=usd_rate,
-                        payload_historical_low=item.historical_low
+                        payload_historical_low=item.historical_low,
+                        image_url=item.image_url
                     )
 
                 await session.commit()

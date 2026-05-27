@@ -14,3 +14,4 @@ class GameDealSchema(BaseModel):
     historical_low: Optional[float] = None
     promo_start_date: Optional[datetime] = None
     promo_end_date: Optional[datetime] = None
+    image_url: Optional[str] = None
