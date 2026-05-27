@@ -1,7 +1,8 @@
 import logging
+import httpx
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text, update
 from app.core.database import AsyncSessionLocal
 from app.models.game import Game
 from app.services.gamerpower_client import GamerPowerClient
@@ -9,29 +10,58 @@ from app.services.cheapshark_client import CheapSharkClient
 
 logger = logging.getLogger(__name__)
 
-async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None):
+async def get_usd_brl_rate() -> float:
+    """Consulta a AwesomeAPI para obter a cotação atual do USD para BRL."""
+    url = "https://economia.awesomeapi.com.br/last/USD-BRL"
+    headers = {"User-Agent": "GameDealTracker/1.0 (contato@teste.com)"}
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=10.0)
+            response.raise_for_status()
+            data = response.json()
+            return float(data["USDBRL"]["bid"])
+    except Exception as e:
+        logger.error(f"Erro ao obter cotação do dólar: {str(e)}. Usando fallback de 5.50.")
+        return 5.50
+
+async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None, is_active: bool = True, usd_rate: float | None = None, payload_historical_low: float | None = None):
+    # Converte o preço e o historical_low do payload se uma taxa for fornecida (vinda do CheapShark)
+    actual_price = price * usd_rate if usd_rate else price
+    actual_payload_low = payload_historical_low * usd_rate if payload_historical_low and usd_rate else payload_historical_low
+
     result = await session.execute(select(Game).where(Game.title == title))
     game = result.scalars().first()
 
     if game:
-        game.current_price = price
+        game.current_price = actual_price
         game.is_free = is_free
         game.store_name = store_name
         game.deal_url = deal_url
         game.promo_start_date = promo_start_date
         game.promo_end_date = promo_end_date
-        if price < game.historical_low:
-            game.historical_low = price
+        game.is_active = is_active
+
+        # Atualiza o historical_low comparando o valor atual no DB com o do payload e o novo preço
+        candidates = [game.historical_low, actual_price]
+        if actual_payload_low is not None:
+            candidates.append(actual_payload_low)
+        game.historical_low = min(candidates)
     else:
+        # Se não houver payload_historical_low, usa o actual_price como inicial
+        initial_low = actual_price
+        if actual_payload_low is not None:
+            initial_low = min(actual_price, actual_payload_low)
+
         new_game = Game(
             title=title,
-            current_price=price,
-            historical_low=price,
+            current_price=actual_price,
+            historical_low=initial_low,
             is_free=is_free,
             store_name=store_name,
             deal_url=deal_url,
             promo_start_date=promo_start_date,
-            promo_end_date=promo_end_date
+            promo_end_date=promo_end_date,
+            is_active=is_active
         )
         session.add(new_game)
 
@@ -41,18 +71,37 @@ async def sync_games():
     cs_client = CheapSharkClient()
 
     try:
+        usd_rate = await get_usd_brl_rate()
+        logger.info(f"Cotação do dólar obtida: {usd_rate}")
+
         giveaways = await gp_client.get_pc_giveaways()
         deals = await cs_client.get_deals()
 
         async with AsyncSessionLocal() as session:
             try:
+                # Desativa temporariamente todos os jogos do CheapShark (identificados por store_name numérico)
+                await session.execute(text("UPDATE games SET is_active = False WHERE store_name ~ '^[0-9]+$'"))
+
                 # Process giveaways
                 for item in giveaways:
-                    await upsert_game(session, item.title, item.sale_price, True, item.store, item.url, item.promo_start_date, item.promo_end_date)
+                    await upsert_game(session, item.title, item.sale_price, True, item.store, item.url, item.promo_start_date, item.promo_end_date, is_active=True)
 
                 # Process deals
                 for item in deals:
-                    await upsert_game(session, item.title, item.sale_price, item.sale_price == 0, item.store, item.url, item.promo_start_date, item.promo_end_date)
+                    # Aplica a conversão de USD para BRL e define is_active = True
+                    await upsert_game(
+                        session,
+                        item.title,
+                        item.sale_price,
+                        item.sale_price == 0,
+                        item.store,
+                        item.url,
+                        item.promo_start_date,
+                        item.promo_end_date,
+                        is_active=True,
+                        usd_rate=usd_rate,
+                        payload_historical_low=item.historical_low
+                    )
 
                 await session.commit()
                 logger.info("Game synchronization completed successfully.")

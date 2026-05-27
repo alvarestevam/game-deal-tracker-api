@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Float, Boolean, DateTime
+from sqlalchemy import String, Float, Boolean, DateTime, Column
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
@@ -17,4 +17,5 @@ class Game(Base):
     deal_url: Mapped[str | None] = mapped_column(String, nullable=True)
     promo_start_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     promo_end_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
