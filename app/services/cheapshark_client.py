@@ -51,7 +51,8 @@ class CheapSharkClient:
                             deal_rating=deal_rating,
                             deal_id=item.get("dealID"),
                             url=f"https://www.cheapshark.com/redirect?dealID={item.get('dealID')}",
-                            promo_start_date=promo_start_date
+                            promo_start_date=promo_start_date,
+                            image_url=item.get("thumb")
                         )
 
                 # Fetch historical lows in batches of 25

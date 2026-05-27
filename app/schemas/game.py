@@ -13,6 +13,7 @@ class GameResponse(BaseModel):
     promo_start_date: datetime | None = None
     promo_end_date: datetime | None = None
     is_active: bool
+    image_url: str | None = None
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -27,3 +28,4 @@ class GameAuditResponse(BaseModel):
     promo_start_date: datetime | None = None
     promo_end_date: datetime | None = None
     is_active: bool
+    image_url: str | None = None
