@@ -26,8 +26,8 @@ async def get_usd_brl_rate() -> float:
 
 async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None, is_active: bool = True, usd_rate: float | None = None, payload_historical_low: float | None = None):
     # Converte o preço e o historical_low do payload se uma taxa for fornecida (vinda do CheapShark)
-    actual_price = price * usd_rate if usd_rate else price
-    actual_payload_low = payload_historical_low * usd_rate if payload_historical_low and usd_rate else payload_historical_low
+    actual_price = round(price * usd_rate, 2) if usd_rate else price
+    actual_payload_low = round(payload_historical_low * usd_rate, 2) if payload_historical_low and usd_rate else payload_historical_low
 
     result = await session.execute(select(Game).where(Game.title == title))
     game = result.scalars().first()
@@ -45,12 +45,12 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
         candidates = [game.historical_low, actual_price]
         if actual_payload_low is not None:
             candidates.append(actual_payload_low)
-        game.historical_low = min(candidates)
+        game.historical_low = round(min(candidates), 2)
     else:
         # Se não houver payload_historical_low, usa o actual_price como inicial
         initial_low = actual_price
         if actual_payload_low is not None:
-            initial_low = min(actual_price, actual_payload_low)
+            initial_low = round(min(actual_price, actual_payload_low), 2)
 
         new_game = Game(
             title=title,
