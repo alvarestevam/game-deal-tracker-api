@@ -8,7 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.api.v1.health import router as health_router
 from app.api.v1.games import router as games_router
 from app.core.config import settings
-from app.core.database import engine, Base
+from app.core.database import engine, Base, ensure_image_url_column
 from app.models.game import Game
 from app.services.sync_service import sync_games
 from app.core.limiter import limiter
@@ -22,6 +22,9 @@ async def lifespan(app: FastAPI):
     # Startup: Create tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Migração automática de schema para image_url
+    await ensure_image_url_column(engine)
 
     # Configure and start APScheduler
     scheduler = AsyncIOScheduler()

@@ -45,14 +45,14 @@ class CheapSharkClient:
 
                         result_map[game_id] = GameDealSchema(
                             title=item.get("title"),
-                            original_price=float(item.get("normalPrice")),
-                            sale_price=float(item.get("salePrice")),
-                            store=str(item.get("storeID")), # Store ID from CheapShark
+                            original_price=float(item.get("normalPrice")) if item.get("normalPrice") else 0.0,
+                            sale_price=float(item.get("salePrice")) if item.get("salePrice") else 0.0,
+                            store=str(item.get("storeID")) if item.get("storeID") else "Unknown", # Store ID from CheapShark
                             deal_rating=deal_rating,
                             deal_id=item.get("dealID"),
                             url=f"https://www.cheapshark.com/redirect?dealID={item.get('dealID')}",
                             promo_start_date=promo_start_date,
-                            image_url=item.get("thumb")
+                            image_url=item.get("thumb", None)
                         )
 
                 # Fetch historical lows in batches of 25
