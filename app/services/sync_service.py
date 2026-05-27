@@ -19,7 +19,12 @@ async def get_usd_brl_rate() -> float:
             response = await client.get(url, headers=headers, timeout=10.0)
             response.raise_for_status()
             data = response.json()
-            return float(data["USDBRL"]["bid"])
+            # Uso robusto do .get() para acessar a cotação
+            usd_brl = data.get("USDBRL", {})
+            bid = usd_brl.get("bid")
+            if bid:
+                return float(bid)
+            raise ValueError("Cotação 'bid' não encontrada na resposta.")
     except Exception as e:
         logger.error(f"Erro ao obter cotação do dólar: {str(e)}. Usando fallback de 5.50.")
         return 5.50

@@ -47,15 +47,15 @@ class GamerPowerClient:
 
                     result.append(
                         GameDealSchema(
-                            title=item.get("title"),
+                            title=item.get("title", "Unknown"),
                             sale_price=0.0,
-                            store=item.get("platforms"),
-                            url=item.get("open_giveaway_url"),
+                            store=item.get("platforms", "Unknown"),
+                            url=item.get("open_giveaway_url", ""),
                             is_giveaway=True,
-                            deal_id=str(item.get("id")),
+                            deal_id=str(item.get("id")) if item.get("id") else None,
                             promo_start_date=promo_start_date,
                             promo_end_date=promo_end_date,
-                            image_url=item.get("image")
+                            image_url=item.get("image", None)
                         )
                     )
                 return result
