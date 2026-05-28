@@ -1,7 +1,7 @@
 import httpx
 import logging
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.config import settings
 from app.schemas.game_deal import GameDealSchema
 
@@ -45,6 +45,8 @@ class ITADClient:
                         try:
                             # ISO format: 2024-10-01T15:25:52+02:00
                             promo_start_date = datetime.fromisoformat(timestamp)
+                            if promo_start_date.tzinfo is None:
+                                promo_start_date = promo_start_date.replace(tzinfo=timezone.utc)
                         except (ValueError, TypeError):
                             pass
 
@@ -53,6 +55,8 @@ class ITADClient:
                     if expiry:
                         try:
                             promo_end_date = datetime.fromisoformat(expiry)
+                            if promo_end_date.tzinfo is None:
+                                promo_end_date = promo_end_date.replace(tzinfo=timezone.utc)
                         except (ValueError, TypeError):
                             pass
 

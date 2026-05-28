@@ -1,7 +1,7 @@
 import logging
 import httpx
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text, update
 from app.core.database import AsyncSessionLocal
@@ -64,6 +64,19 @@ async def get_usd_brl_rate() -> float:
         return 5.00
 
 async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None, is_active: bool = True, usd_rate: float | None = None, payload_historical_low: float | None = None, image_url: str | None = None):
+    # Padronização de datas para UTC
+    if promo_start_date:
+        if promo_start_date.tzinfo is None:
+            promo_start_date = promo_start_date.replace(tzinfo=timezone.utc)
+        else:
+            promo_start_date = promo_start_date.astimezone(timezone.utc)
+
+    if promo_end_date:
+        if promo_end_date.tzinfo is None:
+            promo_end_date = promo_end_date.replace(tzinfo=timezone.utc)
+        else:
+            promo_end_date = promo_end_date.astimezone(timezone.utc)
+
     # Tratamento de strings longas para evitar erros de DBAPI (estouro de limite de caracteres)
     title = title[:255] if title else "Unknown Title"
     deal_url = deal_url[:500] if deal_url else None
@@ -187,6 +200,8 @@ async def sync_games():
                             )
                     except Exception as e:
                         logger.error(f"Error syncing ITAD deal '{item.title}': {str(e)}")
+
+                logger.info(f"ITAD sync: {len(itad_deals)} deals processed")
 
                 await session.commit()
                 logger.info("Game synchronization completed successfully.")
