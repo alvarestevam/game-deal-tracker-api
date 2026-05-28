@@ -1,96 +1,81 @@
-Documento de Escopo de Projeto: GameDeal Tracker
-1. Visão Geral do Projeto
+# GameDeal Tracker API 🎮💰
 
-Desenvolvimento de um aplicativo móvel (cliente) e uma API proprietária (servidor) destinados ao monitoramento unificado de promoções de jogos de PC e resgate de títulos gratuitos. O sistema atuará como um agregador e auditor de preços, garantindo que descontos sejam validados contra dados históricos reais antes de notificar o usuário. Todo o processamento de backend, rotinas de busca e banco de dados estarão centralizados em uma infraestrutura própria hospedada em uma máquina virtual (Oracle VM).
-2. Objetivos
+O **GameDeal Tracker** é uma API robusta desenvolvida com **FastAPI** para o monitoramento centralizado de ofertas, promoções e jogos gratuitos (giveaways) para PC. O sistema agrega dados de múltiplas fontes, realiza auditoria de preços comparando com históricos reais e converte automaticamente valores de USD para BRL.
 
-    Centralização: Unificar as informações de mais de 20 lojas de distribuição digital (Steam, Epic, GOG, etc.) em uma única interface nativa.
+## 🚀 Arquitetura e Tecnologias
 
-    Auditoria de Valores: Cruzar preços atuais com o menor preço histórico (historical low) para validar a veracidade das promoções.
+- **Framework:** [FastAPI](https://fastapi.tiangolo.com/) (Python 3.10+)
+- **Banco de Dados:** [PostgreSQL](https://www.postgresql.org/) (com SQLAlchemy e AsyncPG para operações assíncronas)
+- **Containerização:** [Docker](https://www.docker.com/) e [Docker Compose](https://docs.docker.com/compose/)
+- **Proxy Reverso:** [Caddy](https://caddyserver.com/) (com suporte nativo a HTTPS)
+- **Sincronização:** Rotinas automáticas via `APScheduler` integradas ao ciclo de vida da aplicação.
 
-    Notificações Pró-ativas: Eliminar a necessidade de verificação manual por meio de alertas automatizados baseados em regras de preços-alvo definidos na Watchlist.
+## 📊 Fontes de Dados
 
-    Otimização de Hardware e Aquisições: Direcionar o foco das ofertas primariamente para plataformas de PC, maximizando a biblioteca de jogos sem gastos desnecessários.
+A API consome dados em tempo real das seguintes plataformas:
 
-3. Arquitetura e Stack Tecnológico
+1.  **IsThereAnyDeal (ITAD):** Principal fonte para ofertas detalhadas e histórico de preços (Historical Low).
+2.  **CheapShark:** Monitoramento de descontos em diversas lojas digitais (Steam, GOG, Humble Store, etc.).
+3.  **GamerPower:** Rastreamento especializado em Giveaways (jogos 100% gratuitos).
+4.  **AwesomeAPI:** Cotação atualizada do USD para BRL para conversão precisa de preços.
 
-A infraestrutura seguirá o modelo cliente-servidor, separando claramente a camada de apresentação da camada de ingestão de dados.
+## 📂 Estrutura do Banco de Dados
 
-    Infraestrutura Cloud: Oracle VM (Hospedagem do servidor web, banco de dados e rotinas de ingestão).
+O modelo principal `Game` armazena as seguintes informações:
 
-    Backend (API): Python utilizando o framework FastAPI para alta performance e criação de endpoints RESTful rápidos.
+- `id`: Identificador único (UUID).
+- `title`: Título do jogo (Chave de busca e unicidade).
+- `current_price`: Preço atual da oferta (em BRL).
+- `historical_low`: Menor preço já registrado no sistema (em BRL).
+- `is_free`: Booleano indicando se o jogo está gratuito.
+- `store_name`: Nome da loja que oferece o desconto.
+- `deal_url`: Link direto para a oferta.
+- `image_url`: URL da imagem/banner em alta resolução.
+- `promo_start_date` / `promo_end_date`: Datas de validade da promoção.
+- `is_active`: Status da oferta (Sincronização reativa).
 
-    Processamento Assíncrono: Celery (ou APScheduler) para executar rotinas agendadas (cron jobs) de consulta às APIs externas sem bloquear o servidor principal.
+## 🛠️ Setup e Execução
 
-    Banco de Dados: PostgreSQL para armazenamento relacional seguro do histórico de preços em cache e dados da Watchlist.
+### Pré-requisitos
+- Docker e Docker Compose instalados.
+- Chave de API do IsThereAnyDeal ([Solicite aqui](https://isthereanydeal.com/apps/my/)).
 
-    Frontend (App Mobile): Flutter (Dart) para compilação multiplataforma, focado em performance de renderização de listas e gráficos.
+### Instalação
 
-    APIs Externas Consumidas:
+1.  **Clone o repositório:**
+    ```bash
+    git clone <repository-url>
+    cd gamedeal-tracker
+    ```
 
-        CheapShark API: Dados de descontos atuais e Deal Rating.
+2.  **Configure as variáveis de ambiente:**
+    Copie o arquivo de exemplo e preencha com suas credenciais:
+    ```bash
+    cp .env.example .env
+    ```
 
-        IsThereAnyDeal (ITAD) API: Gráficos de flutuação e menor preço histórico.
+3.  **Inicie os containers:**
+    ```bash
+    docker-compose up -d --build
+    ```
 
-        GamerPower API: Rastreamento de jogos 100% gratuitos (giveaways).
+4.  **Acesse a documentação interativa:**
+    Acesse `http://localhost:8000/docs` (ou via Caddy no domínio configurado) para visualizar todos os endpoints disponíveis.
 
-4. Escopo Funcional (Funcionalidades do Aplicativo)
-4.1. Radar de Gratuidade (Aba Giveaways)
+## 🔐 Segurança e Rate Limiting
 
-    Listagem em tempo real de jogos base, expansões ou DLCs que estejam com 100% de desconto em lojas cadastradas.
+- **API Key:** Endpoints protegidos exigem o header `X-API-Key`.
+- **Sync Key:** O endpoint de sincronização manual exige `X-Sync-API-Key`.
+- **Limiter:** Implementado rate limit por IP para garantir a estabilidade do serviço.
 
-    Botões de redirecionamento direto para a página de resgate nas lojas oficiais.
+## 🧪 Testes
 
-4.2. Auditoria e Busca de Jogos
+Para executar a suite de testes unitários:
+```bash
+pip install -r requirements.txt
+export PYTHONPATH=.
+pytest
+```
 
-    Barra de pesquisa para consulta de títulos específicos.
-
-    Tela de detalhes do jogo contendo:
-
-        Preço original vs. Preço atual.
-
-        Gráfico simples exibindo a curva do histórico de preço.
-
-        Indicador visual (Selo) sinalizando se é o melhor momento de compra ("Historical Low Atingido" ou "Aguarde melhor oferta").
-
-4.3. Watchlist Inteligente e Alertas
-
-    Capacidade de adicionar jogos à lista de desejos.
-
-    Definição de parâmetros de alerta: notificar apenas se o jogo ficar abaixo de X reais ou se o desconto ultrapassar Y%.
-
-    Integração com serviço de Push Notifications (via Firebase Cloud Messaging) para envio de alertas ao dispositivo móvel.
-
-5. Fases de Desenvolvimento e Entregáveis
-
-    Fase 1: Configuração da Infraestrutura (Servidor e Banco de Dados)
-
-        Configuração da Oracle VM, regras de firewall e deploy do banco de dados PostgreSQL.
-
-        Estruturação do projeto FastAPI e criação das rotas e modelos de dados (pode ser delegado ao Jules).
-
-    Fase 2: Motor de Ingestão e Integração de APIs
-
-        Criação dos scripts Python responsáveis por fazer o fetch (busca) no CheapShark, ITAD e GamerPower.
-
-        Implementação de um sistema de conversão de moedas (USD para BRL) em tempo real ou via cache diário.
-
-    Fase 3: Desenvolvimento Frontend (Interface Mobile)
-
-        Desenho e estruturação das telas no Flutter.
-
-        Implementação das chamadas HTTP no aplicativo para consumir a API criada na Fase 1.
-
-    Fase 4: Notificações e Polimento
-
-        Integração do sistema de Push Notifications.
-
-        Testes de estresse na API e refinamento do design do aplicativo.
-
-6. Fora do Escopo (Não será desenvolvido nesta versão)
-
-    Sistema de Compras In-App: O aplicativo não processará pagamentos; ele apenas redirecionará o usuário, via link, para a loja oficial (Steam, Epic, etc.).
-
-    Rede Social: Recursos de amizade, fóruns ou chat integrados não farão parte deste produto.
-
-    Múltiplos Perfis de Usuário complexos: Inicialmente focado no uso pessoal ou instâncias isoladas, sem necessidade imediata de um sistema de login com permissões complexas de controle de acesso (RBAC).
+---
+*Desenvolvido para entusiastas de jogos que buscam economia e eficiência.*
