@@ -60,10 +60,15 @@ async def get_usd_brl_rate() -> float:
                 return float(bid)
             raise ValueError("Cotação 'bid' não encontrada na resposta.")
     except Exception as e:
-        logger.error(f"Erro ao obter cotação do dólar: {str(e)}. Usando fallback de 5.50.")
-        return 5.50
+        logger.warning(f"Erro ao obter cotação do dólar: {str(e)}. Usando fallback de 5.00.")
+        return 5.00
 
 async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None, is_active: bool = True, usd_rate: float | None = None, payload_historical_low: float | None = None, image_url: str | None = None):
+    # Tratamento de strings longas para evitar erros de DBAPI (estouro de limite de caracteres)
+    title = title[:255] if title else "Unknown Title"
+    deal_url = deal_url[:500] if deal_url else None
+    image_url = image_url[:500] if image_url else None
+
     # Higienização de URL de imagem para Steam
     sanitized_image_url = _sanitize_steam_image_url(image_url)
     # Higienização de URL de imagem para Gamesplanet
@@ -134,42 +139,54 @@ async def sync_games():
 
                 # Process giveaways
                 for item in giveaways:
-                    await upsert_game(session, item.title, item.sale_price, True, item.store, item.url, item.promo_start_date, item.promo_end_date, is_active=True, image_url=item.image_url)
+                    try:
+                        async with session.begin_nested():
+                            await upsert_game(session, item.title, item.sale_price, True, item.store, item.url, item.promo_start_date, item.promo_end_date, is_active=True, image_url=item.image_url)
+                    except Exception as e:
+                        logger.error(f"Error syncing giveaway '{item.title}': {str(e)}")
 
                 # Process deals
                 for item in deals:
-                    # Aplica a conversão de USD para BRL e define is_active = True
-                    await upsert_game(
-                        session,
-                        item.title,
-                        item.sale_price,
-                        item.sale_price == 0,
-                        item.store,
-                        item.url,
-                        item.promo_start_date,
-                        item.promo_end_date,
-                        is_active=True,
-                        usd_rate=usd_rate,
-                        payload_historical_low=item.historical_low,
-                        image_url=item.image_url
-                    )
+                    try:
+                        async with session.begin_nested():
+                            # Aplica a conversão de USD para BRL e define is_active = True
+                            await upsert_game(
+                                session,
+                                item.title,
+                                item.sale_price,
+                                item.sale_price == 0,
+                                item.store,
+                                item.url,
+                                item.promo_start_date,
+                                item.promo_end_date,
+                                is_active=True,
+                                usd_rate=usd_rate,
+                                payload_historical_low=item.historical_low,
+                                image_url=item.image_url
+                            )
+                    except Exception as e:
+                        logger.error(f"Error syncing CheapShark deal '{item.title}': {str(e)}")
 
                 # Process ITAD deals
                 for item in itad_deals:
-                    await upsert_game(
-                        session,
-                        item.title,
-                        item.sale_price,
-                        item.sale_price == 0,
-                        item.store,
-                        item.url,
-                        item.promo_start_date,
-                        item.promo_end_date,
-                        is_active=True,
-                        usd_rate=usd_rate,
-                        payload_historical_low=item.historical_low,
-                        image_url=item.image_url
-                    )
+                    try:
+                        async with session.begin_nested():
+                            await upsert_game(
+                                session,
+                                item.title,
+                                item.sale_price,
+                                item.sale_price == 0,
+                                item.store,
+                                item.url,
+                                item.promo_start_date,
+                                item.promo_end_date,
+                                is_active=True,
+                                usd_rate=usd_rate,
+                                payload_historical_low=item.historical_low,
+                                image_url=item.image_url
+                            )
+                    except Exception as e:
+                        logger.error(f"Error syncing ITAD deal '{item.title}': {str(e)}")
 
                 await session.commit()
                 logger.info("Game synchronization completed successfully.")
