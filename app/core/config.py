@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     CHEAPSHARK_BASE_URL: str = "https://www.cheapshark.com/api/1.0"
     ITAD_BASE_URL: str = "https://api.isthereanydeal.com"
     ITAD_API_KEY: str = ""
+    ITAD_CLIENT_ID: str = ""
+    ITAD_CLIENT_SECRET: str = ""
 
     @property
     def DATABASE_URL(self) -> str:

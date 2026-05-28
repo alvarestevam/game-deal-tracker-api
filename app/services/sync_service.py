@@ -8,6 +8,7 @@ from app.core.database import AsyncSessionLocal
 from app.models.game import Game
 from app.services.gamerpower_client import GamerPowerClient
 from app.services.cheapshark_client import CheapSharkClient
+from app.services.itad_client import ITADClient
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,7 @@ async def sync_games():
     logger.info("Starting game synchronization...")
     gp_client = GamerPowerClient()
     cs_client = CheapSharkClient()
+    itad_client = ITADClient()
 
     try:
         usd_rate = await get_usd_brl_rate()
@@ -123,6 +125,7 @@ async def sync_games():
 
         giveaways = await gp_client.get_pc_giveaways()
         deals = await cs_client.get_deals()
+        itad_deals = await itad_client.get_deals()
 
         async with AsyncSessionLocal() as session:
             try:
@@ -136,6 +139,23 @@ async def sync_games():
                 # Process deals
                 for item in deals:
                     # Aplica a conversão de USD para BRL e define is_active = True
+                    await upsert_game(
+                        session,
+                        item.title,
+                        item.sale_price,
+                        item.sale_price == 0,
+                        item.store,
+                        item.url,
+                        item.promo_start_date,
+                        item.promo_end_date,
+                        is_active=True,
+                        usd_rate=usd_rate,
+                        payload_historical_low=item.historical_low,
+                        image_url=item.image_url
+                    )
+
+                # Process ITAD deals
+                for item in itad_deals:
                     await upsert_game(
                         session,
                         item.title,
