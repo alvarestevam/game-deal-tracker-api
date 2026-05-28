@@ -64,18 +64,18 @@ async def get_usd_brl_rate() -> float:
         return 5.00
 
 async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None, is_active: bool = True, usd_rate: float | None = None, payload_historical_low: float | None = None, image_url: str | None = None):
-    # Padronização de datas para UTC
+    # Padronização de datas para naive UTC
     if promo_start_date:
-        if promo_start_date.tzinfo is None:
-            promo_start_date = promo_start_date.replace(tzinfo=timezone.utc)
+        if promo_start_date.tzinfo is not None:
+            promo_start_date = promo_start_date.astimezone(timezone.utc).replace(tzinfo=None)
         else:
-            promo_start_date = promo_start_date.astimezone(timezone.utc)
+            promo_start_date = promo_start_date.replace(tzinfo=None)
 
     if promo_end_date:
-        if promo_end_date.tzinfo is None:
-            promo_end_date = promo_end_date.replace(tzinfo=timezone.utc)
+        if promo_end_date.tzinfo is not None:
+            promo_end_date = promo_end_date.astimezone(timezone.utc).replace(tzinfo=None)
         else:
-            promo_end_date = promo_end_date.astimezone(timezone.utc)
+            promo_end_date = promo_end_date.replace(tzinfo=None)
 
     # Tratamento de strings longas para evitar erros de DBAPI (estouro de limite de caracteres)
     title = title[:255] if title else "Unknown Title"
