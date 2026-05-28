@@ -22,6 +22,27 @@ def _sanitize_steam_image_url(image_url: str | None) -> str | None:
 
     return image_url
 
+def _sanitize_gamesplanet_image_url(image_url: str | None) -> str | None:
+    """Transforma URLs de miniaturas da Gamesplanet em imagens de alta resolução."""
+    if not image_url:
+        return image_url
+
+    if "gamesplanet.com" in image_url or "gpstatic.com" in image_url:
+        # Substitui prefixos de dimensões pelo padrão de alta resolução 'packshot-'
+        # Conforme a instrução, usa-se .replace() para a substituição
+        new_url = image_url.replace("t280x115-", "packshot-")
+        new_url = new_url.replace("t500x500-", "packshot-")
+        new_url = new_url.replace("t620x300-", "packshot-")
+        new_url = new_url.replace("t300x170-", "packshot-")
+
+        # Remove sufixos de baixa resolução
+        new_url = new_url.replace("_small", "")
+        new_url = new_url.replace("_thumb", "")
+
+        return new_url
+
+    return image_url
+
 async def get_usd_brl_rate() -> float:
     """Consulta a AwesomeAPI para obter a cotação atual do USD para BRL."""
     url = "https://economia.awesomeapi.com.br/last/USD-BRL"
@@ -44,6 +65,8 @@ async def get_usd_brl_rate() -> float:
 async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None, is_active: bool = True, usd_rate: float | None = None, payload_historical_low: float | None = None, image_url: str | None = None):
     # Higienização de URL de imagem para Steam
     sanitized_image_url = _sanitize_steam_image_url(image_url)
+    # Higienização de URL de imagem para Gamesplanet
+    sanitized_image_url = _sanitize_gamesplanet_image_url(sanitized_image_url)
 
     # Converte o preço e o historical_low do payload se uma taxa for fornecida (vinda do CheapShark)
     actual_price = round(price * usd_rate, 2) if usd_rate else price
