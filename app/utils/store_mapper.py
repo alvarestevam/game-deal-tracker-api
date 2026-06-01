@@ -3,67 +3,106 @@ from typing import Dict
 STORE_DATA = {
     "Steam": {
         "name": "Steam",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png"
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png"
     },
-    "Epic Games": {
+    "Epic Games Store": {
         "name": "Epic Games Store",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Epic_Games_logo.svg/512px-Epic_Games_logo.svg.png"
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Epic_Games_logo.svg/512px-Epic_Games_logo.svg.png"
     },
     "GOG": {
         "name": "GOG",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/GOG.com_logo.svg/512px-GOG.com_logo.svg.png"
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/GOG.com_logo.svg/512px-GOG.com_logo.svg.png"
     },
     "Itch.io": {
         "name": "Itch.io",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/Itch.io_logo.svg/512px-Itch.io_logo.svg.png"
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/Itch.io_logo.svg/512px-Itch.io_logo.svg.png"
     },
     "IndieGala": {
         "name": "IndieGala",
-        "icon": "https://upload.wikimedia.org/wikipedia/en/thumb/8/8a/Indie_Gala_logo.png/220px-Indie_Gala_logo.png"
+        "store_icon_url": "https://www.cheapshark.com/img/stores/logos/29.png"
     },
     "PlayStation": {
         "name": "PlayStation Store",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Playstation_logo_colour.svg/512px-Playstation_logo_colour.svg.png"
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Playstation_logo_colour.svg/512px-Playstation_logo_colour.svg.png"
     },
     "Xbox": {
         "name": "Xbox Store",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Xbox_logo_%282019%29.svg/512px-Xbox_logo_%282019%29.svg.png"
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Xbox_logo_%282019%29.svg/512px-Xbox_logo_%282019%29.svg.png"
     },
     "Nintendo": {
         "name": "Nintendo eShop",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Nintendo.svg/512px-Nintendo.svg.png"
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Nintendo.svg/512px-Nintendo.svg.png"
     },
-    "Humble": {
+    "Humble Store": {
         "name": "Humble Store",
-        "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Humble_Bundle_logo.svg/512px-Humble_Bundle_logo.svg.png"
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Humble_Bundle_logo.svg/512px-Humble_Bundle_logo.svg.png"
     },
-    "GreenManGaming": {
+    "Green Man Gaming": {
         "name": "Green Man Gaming",
-        "icon": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/Green_Man_Gaming_logo.png/250px-Green_Man_Gaming_logo.png"
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/Green_Man_Gaming_logo.png/512px-Green_Man_Gaming_logo.png"
+    },
+    "Direct2Drive": {
+        "name": "Direct2Drive",
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Direct2Drive_logo.svg/512px-Direct2Drive_logo.svg.png"
+    },
+    "DLGamer": {
+        "name": "DLGamer",
+        "store_icon_url": "https://www.cheapshark.com/img/stores/banners/32.png"
+    },
+    "Nuuvem": {
+        "name": "Nuuvem",
+        "store_icon_url": "https://assets.nuuvem.com/assets/fe/images/nuuvem_logo-ab61245ad5.png"
+    },
+    "Fanatical": {
+        "name": "Fanatical",
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Fanatical_Logo.svg/512px-Fanatical_Logo.svg.png"
+    },
+    "Ubisoft Store": {
+        "name": "Ubisoft Store",
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Ubisoft_logo.svg/512px-Ubisoft_logo.svg.png"
+    },
+    "Gamesplanet": {
+        "name": "Gamesplanet",
+        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Logo_GamesPlanet.png/512px-Logo_GamesPlanet.png"
     },
     "Default": {
         "name": "Other Store",
-        "icon": "https://cdn-icons-png.flaticon.com/512/5260/5260478.png"
+        "store_icon_url": "https://cdn-icons-png.flaticon.com/512/5260/5260478.png"
     }
 }
 
 CHEAPSHARK_MAP = {
     "1": "Steam",
-    "2": "GreenManGaming",
-    "11": "Humble"
+    "2": "Green Man Gaming",
+    "3": "GOG",
+    "7": "Direct2Drive",
+    "11": "Humble Store",
+    "15": "DLGamer",
+    "21": "Nuuvem",
+    "23": "Fanatical",
+    "25": "Epic Games Store",
+    "27": "Ubisoft Store",
+    "35": "Gamesplanet"
 }
 
 SUBSTRING_MAP = {
-    "epic": "Epic Games",
+    "steam": "Steam",
+    "epic": "Epic Games Store",
     "gog": "GOG",
     "itch.io": "Itch.io",
     "indiegala": "IndieGala",
     "playstation": "PlayStation",
     "xbox": "Xbox",
     "nintendo": "Nintendo",
-    "humble": "Humble",
-    "steam": "Steam",
-    "greenman": "GreenManGaming"
+    "humble": "Humble Store",
+    "greenman": "Green Man Gaming",
+    "direct2drive": "Direct2Drive",
+    "dlgamer": "DLGamer",
+    "nuuvem": "Nuuvem",
+    "fanatical": "Fanatical",
+    "ubisoft": "Ubisoft Store",
+    "uplay": "Ubisoft Store",
+    "gamesplanet": "Gamesplanet"
 }
 
 def map_store(store_input: str | None) -> Dict[str, str]:
@@ -95,5 +134,5 @@ def map_store(store_input: str | None) -> Dict[str, str]:
     # 4. Fallback: use cleaned name but generic icon
     return {
         "name": clean_name,
-        "icon": STORE_DATA["Default"]["icon"]
+        "store_icon_url": STORE_DATA["Default"]["store_icon_url"]
     }

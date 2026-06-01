@@ -26,7 +26,7 @@ class GameResponse(BaseModel):
         # 1. Store Mapping
         mapped = map_store(self.store_name)
         self.store_name = mapped["name"]
-        self.store_icon_url = mapped["icon"]
+        self.store_icon_url = mapped["store_icon_url"]
 
         # 2. Image Fallback
         if not self.image_url:
@@ -52,7 +52,7 @@ class GameAuditResponse(BaseModel):
         # 1. Store Mapping
         mapped = map_store(self.store_name)
         self.store_name = mapped["name"]
-        self.store_icon_url = mapped["icon"]
+        self.store_icon_url = mapped["store_icon_url"]
 
         # 2. Image Fallback
         if not self.image_url:
