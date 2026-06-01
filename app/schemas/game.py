@@ -39,6 +39,7 @@ class GameResponse(BaseModel):
         elif self.store_name == "Nuuvem":
             self.estimated_final_price = self.current_price
         else:
+            # International stores: apply 6.38% (IOF + Spread)
             self.estimated_final_price = round(self.current_price * 1.0638, 2)
 
         return self
@@ -69,11 +70,13 @@ class GameAuditResponse(BaseModel):
             self.image_url = "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"
 
         # 3. Estimated Final Price Calculation
+        # GameAuditResponse doesn't have is_free field, use current_price only
         if self.current_price == 0:
             self.estimated_final_price = 0.0
         elif self.store_name == "Nuuvem":
             self.estimated_final_price = self.current_price
         else:
+            # International stores: apply 6.38% (IOF + Spread)
             self.estimated_final_price = round(self.current_price * 1.0638, 2)
 
         return self
