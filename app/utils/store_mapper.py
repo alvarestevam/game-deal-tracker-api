@@ -73,18 +73,27 @@ def map_store(store_input: str | None) -> Dict[str, str]:
     if not store_input:
         return STORE_DATA["Default"]
 
-    # 1. Treat CheapShark numeric IDs
-    if store_input in CHEAPSHARK_MAP:
-        return STORE_DATA[CHEAPSHARK_MAP[store_input]]
+    # 1. Aggressive cleaning of parasitic substrings
+    parasitic_substrings = ["PC, ", ", DRM-Free", ", Steam Key", ", Windows"]
+    clean_name = store_input
+    for parasitic in parasitic_substrings:
+        clean_name = clean_name.replace(parasitic, "")
 
-    # 2. Substring detection (GamerPower/ITAD/Others)
-    lower_input = store_input.lower()
+    # Trim potential trailing commas or spaces left after replacement
+    clean_name = clean_name.strip().strip(",").strip()
+
+    # 2. Treat CheapShark numeric IDs
+    if clean_name in CHEAPSHARK_MAP:
+        return STORE_DATA[CHEAPSHARK_MAP[clean_name]]
+
+    # 3. Substring detection (GamerPower/ITAD/Others)
+    lower_input = clean_name.lower()
     for key, store_key in SUBSTRING_MAP.items():
         if key in lower_input:
             return STORE_DATA[store_key]
 
-    # 3. Fallback: use original name but generic icon
+    # 4. Fallback: use cleaned name but generic icon
     return {
-        "name": store_input,
+        "name": clean_name,
         "icon": STORE_DATA["Default"]["icon"]
     }

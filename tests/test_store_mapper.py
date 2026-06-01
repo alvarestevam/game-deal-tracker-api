@@ -23,6 +23,13 @@ def test_map_store_unknown():
     assert result["name"] == "My Super Store"
     assert "5260478.png" in result["icon"]
 
+def test_map_store_aggressive_cleaning():
+    # Test cases for aggressive cleaning
+    assert map_store("Itch.io, DRM-Free")["name"] == "Itch.io"
+    assert map_store("Steam, Windows")["name"] == "Steam"
+    assert map_store("GenericStore, PC, ")["name"] == "GenericStore"
+    assert map_store("Epic Games, Steam Key")["name"] == "Epic Games Store" # Mapped via substring "epic"
+
 def test_game_response_mapping():
     game = GameResponse(
         id=uuid4(),
@@ -38,6 +45,33 @@ def test_game_response_mapping():
     assert game.store_icon_url is not None
     assert "Steam_icon_logo.svg.png" in game.store_icon_url
 
+def test_game_response_image_fallback():
+    game = GameResponse(
+        id=uuid4(),
+        title="Test Game",
+        current_price=10.0,
+        historical_low=5.0,
+        is_free=False,
+        store_name="Steam",
+        is_active=True,
+        image_url=None,
+        updated_at=datetime.now()
+    )
+    assert game.image_url == "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"
+
+    game_empty = GameResponse(
+        id=uuid4(),
+        title="Test Game",
+        current_price=10.0,
+        historical_low=5.0,
+        is_free=False,
+        store_name="Steam",
+        is_active=True,
+        image_url="",
+        updated_at=datetime.now()
+    )
+    assert game_empty.image_url == "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"
+
 def test_game_audit_response_mapping():
     game = GameAuditResponse(
         title="Test Game",
@@ -50,3 +84,15 @@ def test_game_audit_response_mapping():
     assert game.store_name == "Epic Games Store"
     assert game.store_icon_url is not None
     assert "Epic_Games_logo.svg.png" in game.store_icon_url
+
+def test_game_audit_response_image_fallback():
+    game = GameAuditResponse(
+        title="Test Game",
+        current_price=10.0,
+        historical_low=5.0,
+        is_historical_low=False,
+        store_name="Steam",
+        is_active=True,
+        image_url=None
+    )
+    assert game.image_url == "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"

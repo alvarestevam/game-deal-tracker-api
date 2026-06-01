@@ -23,9 +23,15 @@ class GameResponse(BaseModel):
 
     @model_validator(mode='after')
     def apply_store_mapping(self) -> 'GameResponse':
+        # 1. Store Mapping
         mapped = map_store(self.store_name)
         self.store_name = mapped["name"]
         self.store_icon_url = mapped["icon"]
+
+        # 2. Image Fallback
+        if not self.image_url:
+            self.image_url = "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"
+
         return self
 
 class GameAuditResponse(BaseModel):
@@ -43,7 +49,13 @@ class GameAuditResponse(BaseModel):
 
     @model_validator(mode='after')
     def apply_store_mapping(self) -> 'GameAuditResponse':
+        # 1. Store Mapping
         mapped = map_store(self.store_name)
         self.store_name = mapped["name"]
         self.store_icon_url = mapped["icon"]
+
+        # 2. Image Fallback
+        if not self.image_url:
+            self.image_url = "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"
+
         return self
