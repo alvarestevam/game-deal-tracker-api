@@ -6,22 +6,22 @@ from datetime import datetime
 def test_map_store_steam_id():
     result = map_store("1")
     assert result["name"] == "Steam"
-    assert "Steam_icon_logo.svg.png" in result["icon"]
+    assert "Steam_icon_logo.svg.png" in result["store_icon_url"]
 
 def test_map_store_epic_substring():
     result = map_store("Epic Games Store")
     assert result["name"] == "Epic Games Store"
-    assert "Epic_Games_logo.svg.png" in result["icon"]
+    assert "Epic_Games_logo.svg.png" in result["store_icon_url"]
 
 def test_map_store_gog_substring():
     result = map_store("GOG.com")
     assert result["name"] == "GOG"
-    assert "GOG.com_logo.svg.png" in result["icon"]
+    assert "GOG.com_logo.svg.png" in result["store_icon_url"]
 
 def test_map_store_unknown():
     result = map_store("My Super Store")
     assert result["name"] == "My Super Store"
-    assert "5260478.png" in result["icon"]
+    assert "5260478.png" in result["store_icon_url"]
 
 def test_map_store_aggressive_cleaning():
     # Test cases for aggressive cleaning
