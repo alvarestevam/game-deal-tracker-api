@@ -31,7 +31,7 @@ def test_game_response_price_calc():
     print(f"Nuuvem Game: {nuuvem_game.estimated_final_price}")
     assert nuuvem_game.estimated_final_price == 100.0
 
-    # 3. International Game (Steam)
+    # 3. BRL National Store (Steam)
     steam_game = GameResponse(
         id=uuid.uuid4(),
         title="Steam Game",
@@ -43,9 +43,9 @@ def test_game_response_price_calc():
         updated_at=datetime.utcnow()
     )
     print(f"Steam Game: {steam_game.estimated_final_price}")
-    assert steam_game.estimated_final_price == 106.38
+    assert steam_game.estimated_final_price == 100.0
 
-    # 4. International Game (Epic)
+    # 4. BRL National Store (Epic)
     epic_game = GameResponse(
         id=uuid.uuid4(),
         title="Epic Game",
@@ -57,7 +57,21 @@ def test_game_response_price_calc():
         updated_at=datetime.utcnow()
     )
     print(f"Epic Game: {epic_game.estimated_final_price}")
-    assert epic_game.estimated_final_price == 53.19 # 50 * 1.0638 = 53.19
+    assert epic_game.estimated_final_price == 50.0
+
+    # 5. International Game (Gamesplanet)
+    gp_game = GameResponse(
+        id=uuid.uuid4(),
+        title="Gamesplanet Game",
+        current_price=100.0,
+        historical_low=80.0,
+        is_free=False,
+        store_name="Gamesplanet",
+        is_active=True,
+        updated_at=datetime.utcnow()
+    )
+    print(f"Gamesplanet Game: {gp_game.estimated_final_price}")
+    assert gp_game.estimated_final_price == 106.38
 
 def test_game_audit_response_price_calc():
     # 1. Free Game
@@ -84,7 +98,7 @@ def test_game_audit_response_price_calc():
     print(f"Nuuvem Game Audit: {nuuvem_game.estimated_final_price}")
     assert nuuvem_game.estimated_final_price == 100.0
 
-    # 3. International Game (Steam)
+    # 3. BRL National Store (Steam)
     steam_game = GameAuditResponse(
         title="Steam Game Audit",
         current_price=100.0,
@@ -94,7 +108,7 @@ def test_game_audit_response_price_calc():
         is_active=True
     )
     print(f"Steam Game Audit: {steam_game.estimated_final_price}")
-    assert steam_game.estimated_final_price == 106.38
+    assert steam_game.estimated_final_price == 100.0
 
 if __name__ == "__main__":
     try:

@@ -34,12 +34,13 @@ class GameResponse(BaseModel):
             self.image_url = "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"
 
         # 3. Estimated Final Price Calculation
+        brl_stores = ("Steam", "Epic Games Store", "Nuuvem")
         if self.is_free or self.current_price == 0:
             self.estimated_final_price = 0.0
-        elif self.store_name == "Nuuvem":
+        elif self.store_name in brl_stores:
             self.estimated_final_price = self.current_price
         else:
-            # International stores: apply 6.38% (IOF + Spread)
+            # Lojas puramente internacionais em USD (Gamesplanet, Fanatical, etc.)
             self.estimated_final_price = round(self.current_price * 1.0638, 2)
 
         return self
@@ -71,12 +72,13 @@ class GameAuditResponse(BaseModel):
 
         # 3. Estimated Final Price Calculation
         # GameAuditResponse doesn't have is_free field, use current_price only
+        brl_stores = ("Steam", "Epic Games Store", "Nuuvem")
         if self.current_price == 0:
             self.estimated_final_price = 0.0
-        elif self.store_name == "Nuuvem":
+        elif self.store_name in brl_stores:
             self.estimated_final_price = self.current_price
         else:
-            # International stores: apply 6.38% (IOF + Spread)
+            # Lojas puramente internacionais em USD (Gamesplanet, Fanatical, etc.)
             self.estimated_final_price = round(self.current_price * 1.0638, 2)
 
         return self
