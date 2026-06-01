@@ -17,6 +17,7 @@ class GameResponse(BaseModel):
     promo_end_date: datetime | None = None
     is_active: bool
     image_url: str | None = None
+    estimated_final_price: float = 0.0
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -32,6 +33,14 @@ class GameResponse(BaseModel):
         if not self.image_url:
             self.image_url = "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"
 
+        # 3. Estimated Final Price Calculation
+        if self.is_free or self.current_price == 0:
+            self.estimated_final_price = 0.0
+        elif self.store_name == "Nuuvem":
+            self.estimated_final_price = self.current_price
+        else:
+            self.estimated_final_price = round(self.current_price * 1.0638, 2)
+
         return self
 
 class GameAuditResponse(BaseModel):
@@ -46,6 +55,7 @@ class GameAuditResponse(BaseModel):
     promo_end_date: datetime | None = None
     is_active: bool
     image_url: str | None = None
+    estimated_final_price: float = 0.0
 
     @model_validator(mode='after')
     def apply_store_mapping(self) -> 'GameAuditResponse':
@@ -57,5 +67,13 @@ class GameAuditResponse(BaseModel):
         # 2. Image Fallback
         if not self.image_url:
             self.image_url = "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"
+
+        # 3. Estimated Final Price Calculation
+        if self.current_price == 0:
+            self.estimated_final_price = 0.0
+        elif self.store_name == "Nuuvem":
+            self.estimated_final_price = self.current_price
+        else:
+            self.estimated_final_price = round(self.current_price * 1.0638, 2)
 
         return self
