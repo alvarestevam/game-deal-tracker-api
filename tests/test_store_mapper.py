@@ -1,5 +1,5 @@
 from app.utils.store_mapper import map_store
-from app.schemas.game import GameResponse, GameAuditResponse
+from app.schemas.game import GameResponse, GameAuditResponse, OfferResponse
 from uuid import uuid4
 from datetime import datetime
 
@@ -30,69 +30,58 @@ def test_map_store_aggressive_cleaning():
     assert map_store("GenericStore, PC, ")["name"] == "GenericStore"
     assert map_store("Epic Games, Steam Key")["name"] == "Epic Games Store" # Mapped via substring "epic"
 
-def test_game_response_mapping():
-    game = GameResponse(
-        id=uuid4(),
-        title="Test Game",
+def test_offer_response_mapping():
+    offer = OfferResponse(
+        store_name="1",
         current_price=10.0,
         historical_low=5.0,
-        is_free=False,
-        store_name="1",
         is_active=True,
         updated_at=datetime.now()
     )
-    assert game.store_name == "Steam"
-    assert game.store_icon_url is not None
-    assert "Steam_icon_logo.svg.png" in game.store_icon_url
+    assert offer.store_name == "Steam"
+    assert offer.store_icon_url is not None
+    assert "Steam_icon_logo.svg.png" in offer.store_icon_url
 
 def test_game_response_image_fallback():
     game = GameResponse(
         id=uuid4(),
         title="Test Game",
-        current_price=10.0,
-        historical_low=5.0,
-        is_free=False,
-        store_name="Steam",
-        is_active=True,
         image_url=None,
-        updated_at=datetime.now()
+        updated_at=datetime.now(),
+        offers=[]
     )
     assert game.image_url == "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"
 
     game_empty = GameResponse(
         id=uuid4(),
         title="Test Game",
-        current_price=10.0,
-        historical_low=5.0,
-        is_free=False,
-        store_name="Steam",
-        is_active=True,
         image_url="",
-        updated_at=datetime.now()
+        updated_at=datetime.now(),
+        offers=[]
     )
     assert game_empty.image_url == "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"
 
 def test_game_audit_response_mapping():
+    offer = OfferResponse(
+        store_name="epic games",
+        current_price=10.0,
+        historical_low=10.0,
+        is_active=True,
+        updated_at=datetime.now()
+    )
     game = GameAuditResponse(
         title="Test Game",
-        current_price=10.0,
-        historical_low=5.0,
-        is_historical_low=False,
-        store_name="epic games",
-        is_active=True
+        offers=[offer]
     )
-    assert game.store_name == "Epic Games Store"
-    assert game.store_icon_url is not None
-    assert "Epic_Games_logo.svg.png" in game.store_icon_url
+    assert game.offers[0].store_name == "Epic Games Store"
+    assert game.offers[0].store_icon_url is not None
+    assert "Epic_Games_logo.svg.png" in game.offers[0].store_icon_url
+    assert game.is_historical_low == True
 
 def test_game_audit_response_image_fallback():
     game = GameAuditResponse(
         title="Test Game",
-        current_price=10.0,
-        historical_low=5.0,
-        is_historical_low=False,
-        store_name="Steam",
-        is_active=True,
-        image_url=None
+        image_url=None,
+        offers=[]
     )
     assert game.image_url == "https://via.placeholder.com/600x300.png?text=GamesInDeal+No+Image"
