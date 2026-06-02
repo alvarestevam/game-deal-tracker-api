@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text, update
 from app.core.database import AsyncSessionLocal
-from app.models.game import Game
+from app.models.game import Game, GameOffer
 from app.services.gamerpower_client import GamerPowerClient
 from app.services.cheapshark_client import CheapSharkClient
 from app.services.itad_client import ITADClient
@@ -30,7 +30,6 @@ def _sanitize_gamesplanet_image_url(image_url: str | None) -> str | None:
 
     if "gamesplanet.com" in image_url or "gpstatic.com" in image_url:
         # Substitui prefixos de dimensões pelo padrão de alta resolução 'packshot-'
-        # Conforme a instrução, usa-se .replace() para a substituição
         new_url = image_url.replace("t280x115-", "packshot-")
         new_url = new_url.replace("t500x500-", "packshot-")
         new_url = new_url.replace("t620x300-", "packshot-")
@@ -50,10 +49,10 @@ async def get_usd_brl_rate() -> float:
     headers = {"User-Agent": "GameDealTracker/1.0 (contato@teste.com)"}
     try:
         async with httpx.AsyncClient() as client:
+            # Use headers for all external requests as per memory
             response = await client.get(url, headers=headers, timeout=10.0)
             response.raise_for_status()
             data = response.json()
-            # Uso robusto do .get() para acessar a cotação
             usd_brl = data.get("USDBRL", {})
             bid = usd_brl.get("bid")
             if bid:
@@ -77,59 +76,78 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
         else:
             promo_end_date = promo_end_date.replace(tzinfo=None)
 
-    # Tratamento de strings longas para evitar erros de DBAPI (estouro de limite de caracteres)
+    # Tratamento de strings longas
     title = title[:255] if title else "Unknown Title"
     deal_url = deal_url[:500] if deal_url else None
     image_url = image_url[:500] if image_url else None
 
-    # Higienização de URL de imagem para Steam
     sanitized_image_url = _sanitize_steam_image_url(image_url)
-    # Higienização de URL de imagem para Gamesplanet
     sanitized_image_url = _sanitize_gamesplanet_image_url(sanitized_image_url)
 
-    # Converte o preço e o historical_low do payload se uma taxa for fornecida (vinda do CheapShark)
     actual_price = round(price * usd_rate, 2) if usd_rate else price
     actual_payload_low = round(payload_historical_low * usd_rate, 2) if payload_historical_low and usd_rate else payload_historical_low
 
+    # Etapa 1: Find or Create Game
     result = await session.execute(select(Game).where(Game.title == title))
     game = result.scalars().first()
 
-    if game:
-        game.current_price = actual_price
-        game.is_free = is_free
-        game.store_name = store_name
-        game.deal_url = deal_url
-        game.promo_start_date = promo_start_date
-        game.promo_end_date = promo_end_date
-        game.is_active = is_active
-        # Atualiza image_url vinda do payload (thumb no CheapShark / image no GamerPower)
-        game.image_url = sanitized_image_url
+    if not game:
+        game = Game(title=title, image_url=sanitized_image_url)
+        session.add(game)
+        await session.flush() # Ensure game.id is available
+    else:
+        # Update metadata if necessary
+        if sanitized_image_url:
+            game.image_url = sanitized_image_url
 
-        # Atualiza o historical_low comparando o valor atual no DB com o do payload e o novo preço
-        candidates = [game.historical_low, actual_price]
+    # Etapa 2: Upsert GameOffer (game_id + store_name)
+    offer_result = await session.execute(
+        select(GameOffer).where(
+            GameOffer.game_id == game.id,
+            GameOffer.store_name == store_name
+        )
+    )
+    offer = offer_result.scalars().first()
+
+    # Calculate estimated final price
+    brl_stores = ("Steam", "Epic Games Store", "Nuuvem")
+    if actual_price == 0:
+        est_final_price = 0.0
+    elif store_name in brl_stores:
+        est_final_price = actual_price
+    else:
+        est_final_price = round(actual_price * 1.0638, 2)
+
+    if offer:
+        offer.current_price = actual_price
+        offer.estimated_final_price = est_final_price
+        offer.deal_url = deal_url
+        offer.promo_start_date = promo_start_date
+        offer.promo_end_date = promo_end_date
+        offer.is_active = is_active
+
+        # Update historical low
+        candidates = [offer.historical_low, actual_price]
         if actual_payload_low is not None:
             candidates.append(actual_payload_low)
-        game.historical_low = round(min(candidates), 2)
+        offer.historical_low = round(min(candidates), 2)
     else:
-        # Se não houver payload_historical_low, usa o actual_price como inicial
         initial_low = actual_price
         if actual_payload_low is not None:
             initial_low = round(min(actual_price, actual_payload_low), 2)
 
-        new_game = Game(
-            title=title,
+        new_offer = GameOffer(
+            game_id=game.id,
+            store_name=store_name,
             current_price=actual_price,
             historical_low=initial_low,
-            is_free=is_free,
-            store_name=store_name,
+            estimated_final_price=est_final_price,
             deal_url=deal_url,
             promo_start_date=promo_start_date,
             promo_end_date=promo_end_date,
-            is_active=is_active,
-            # Persiste image_url vinda do payload
-            image_url=sanitized_image_url
+            is_active=is_active
         )
-        session.add(new_game)
+        session.add(new_offer)
 
 async def sync_games():
     logger.info("Starting game synchronization...")
@@ -147,8 +165,8 @@ async def sync_games():
 
         async with AsyncSessionLocal() as session:
             try:
-                # Desativa temporariamente todos os jogos do CheapShark (identificados por store_name numérico)
-                await session.execute(text("UPDATE games SET is_active = False WHERE store_name ~ '^[0-9]+$'"))
+                # Deativa todas as ofertas antes de sincronizar
+                await session.execute(text("UPDATE game_offers SET is_active = False"))
 
                 # Process giveaways
                 for item in giveaways:
@@ -162,7 +180,6 @@ async def sync_games():
                 for item in deals:
                     try:
                         async with session.begin_nested():
-                            # Aplica a conversão de USD para BRL e define is_active = True
                             await upsert_game(
                                 session,
                                 item.title,
@@ -200,8 +217,6 @@ async def sync_games():
                             )
                     except Exception as e:
                         logger.error(f"Error syncing ITAD deal '{item.title}': {str(e)}")
-
-                logger.info(f"ITAD sync: {len(itad_deals)} deals processed")
 
                 await session.commit()
                 logger.info("Game synchronization completed successfully.")
