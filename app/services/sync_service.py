@@ -9,6 +9,7 @@ from app.models.game import Game, GameOffer
 from app.services.gamerpower_client import GamerPowerClient
 from app.services.cheapshark_client import CheapSharkClient
 from app.services.itad_client import ITADClient
+from app.utils.text_utils import normalize_title
 
 logger = logging.getLogger(__name__)
 
@@ -87,12 +88,15 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
     actual_price = round(price * usd_rate, 2) if usd_rate else price
     actual_payload_low = round(payload_historical_low * usd_rate, 2) if payload_historical_low and usd_rate else payload_historical_low
 
+    # Geração de slug para normalização e evitar duplicados
+    slug = normalize_title(title)
+
     # Etapa 1: Find or Create Game
-    result = await session.execute(select(Game).where(Game.title == title))
+    result = await session.execute(select(Game).where(Game.slug == slug))
     game = result.scalars().first()
 
     if not game:
-        game = Game(title=title, image_url=sanitized_image_url)
+        game = Game(title=title, slug=slug, image_url=sanitized_image_url)
         session.add(game)
         await session.flush() # Ensure game.id is available
     else:

@@ -11,6 +11,7 @@ class Game(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String, index=True, unique=True)
+    slug: Mapped[str | None] = mapped_column(String, index=True, unique=True, nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
