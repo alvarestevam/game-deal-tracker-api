@@ -35,6 +35,16 @@ async def ensure_slug_column(engine):
             # Índice já existe ou erro ao criar
             pass
 
+async def ensure_metacritic_column(engine):
+    """Garante que a coluna metacritic_score existe na tabela games."""
+    async with engine.begin() as conn:
+        await conn.execute(text("ALTER TABLE games ADD COLUMN IF NOT EXISTS metacritic_score INTEGER;"))
+
+async def ensure_original_price_column(engine):
+    """Garante que a coluna original_price existe na tabela game_offers."""
+    async with engine.begin() as conn:
+        await conn.execute(text("ALTER TABLE game_offers ADD COLUMN IF NOT EXISTS original_price FLOAT;"))
+
 async def backfill_slugs(engine):
     """Gera slugs para registros existentes que ainda não possuem."""
     from app.utils.text_utils import normalize_title

@@ -6,6 +6,7 @@ class GameDealSchema(BaseModel):
     title: str
     original_price: Optional[float] = None
     sale_price: float
+    metacritic_score: Optional[int] = None
     store: str
     deal_rating: Optional[float] = None
     deal_id: Optional[str] = None
