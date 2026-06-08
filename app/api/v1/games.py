@@ -61,6 +61,12 @@ async def get_best_deals(request: Request, db: AsyncSession = Depends(get_db)):
         .join(Game.offers)
         .where(
             GameOffer.is_active == True,
+            ~Game.title.ilike("%DLC%"),
+            ~Game.title.ilike("%Expansion%"),
+            ~Game.title.ilike("%Pack%"),
+            ~Game.title.ilike("%Gift%"),
+            ~Game.title.ilike("%Promo Code%"),
+            ~Game.title.ilike("%Pass%"),
             or_(
                 Game.metacritic_score >= 75,
                 deal_score >= 8.0
@@ -77,21 +83,14 @@ async def get_best_deals(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/deals", response_model=List[GameResponse])
 async def get_deals(request: Request, db: AsyncSession = Depends(get_db)):
     # Return games that have at least one active offer.
-    # Sorting is a bit tricky now since a game can have multiple offers with different prices.
-    # Usually we want to sort by the best deal (lowest price).
-
-    # Subquery to get the minimum active price per game
-    min_price_sub = (
-        select(GameOffer.game_id, func.min(GameOffer.current_price).label("min_price"))
-        .where(GameOffer.is_active == True)
-        .group_by(GameOffer.game_id)
-        .subquery()
-    )
+    # Sorted by the most recent update date in descending order.
 
     stmt = (
         select(Game)
-        .join(min_price_sub, Game.id == min_price_sub.c.game_id)
-        .order_by(min_price_sub.c.min_price.asc())
+        .join(Game.offers)
+        .where(GameOffer.is_active == True)
+        .group_by(Game.id)
+        .order_by(Game.updated_at.desc())
     )
 
     result = await db.execute(stmt)
