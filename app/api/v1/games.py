@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, case
+from sqlalchemy import select, func, case, or_
 from typing import List
 from app.core.database import get_db
 from app.core.config import settings
@@ -61,7 +61,10 @@ async def get_best_deals(request: Request, db: AsyncSession = Depends(get_db)):
         .join(Game.offers)
         .where(
             GameOffer.is_active == True,
-            Game.metacritic_score >= 75
+            or_(
+                Game.metacritic_score >= 75,
+                deal_score >= 8.0
+            )
         )
         .group_by(Game.id)
         .order_by(func.max(deal_score).desc())
