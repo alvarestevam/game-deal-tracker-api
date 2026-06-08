@@ -61,6 +61,7 @@ async def get_best_deals(request: Request, db: AsyncSession = Depends(get_db)):
         .join(Game.offers)
         .where(
             GameOffer.is_active == True,
+            ~GameOffer.deal_url.ilike("%gamerpower.com%"),
             ~Game.title.ilike("%DLC%"),
             ~Game.title.ilike("%Expansion%"),
             ~Game.title.ilike("%Pack%"),
