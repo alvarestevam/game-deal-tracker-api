@@ -63,7 +63,7 @@ async def get_usd_brl_rate() -> float:
         logger.warning(f"Erro ao obter cotação do dólar: {str(e)}. Usando fallback de 5.00.")
         return 5.00
 
-async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None, is_active: bool = True, usd_rate: float | None = None, payload_historical_low: float | None = None, image_url: str | None = None):
+async def upsert_game(session: AsyncSession, title: str, price: float, is_free: bool, store_name: str | None = None, deal_url: str | None = None, promo_start_date: datetime | None = None, promo_end_date: datetime | None = None, is_active: bool = True, usd_rate: float | None = None, payload_historical_low: float | None = None, image_url: str | None = None, metacritic_score: int | None = None, original_price: float | None = None):
     # Padronização de datas para naive UTC
     if promo_start_date:
         if promo_start_date.tzinfo is not None:
@@ -86,6 +86,7 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
     sanitized_image_url = _sanitize_gamesplanet_image_url(sanitized_image_url)
 
     actual_price = round(price * usd_rate, 2) if usd_rate else price
+    actual_original_price = round(original_price * usd_rate, 2) if original_price and usd_rate else original_price
     actual_payload_low = round(payload_historical_low * usd_rate, 2) if payload_historical_low and usd_rate else payload_historical_low
 
     # Geração de slug para normalização e evitar duplicados
@@ -96,13 +97,15 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
     game = result.scalars().first()
 
     if not game:
-        game = Game(title=title, slug=slug, image_url=sanitized_image_url)
+        game = Game(title=title, slug=slug, image_url=sanitized_image_url, metacritic_score=metacritic_score)
         session.add(game)
         await session.flush() # Ensure game.id is available
     else:
         # Update metadata if necessary
         if sanitized_image_url:
             game.image_url = sanitized_image_url
+        if metacritic_score:
+            game.metacritic_score = metacritic_score
 
     # Etapa 2: Upsert GameOffer (game_id + store_name)
     offer_result = await session.execute(
@@ -124,6 +127,7 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
 
     if offer:
         offer.current_price = actual_price
+        offer.original_price = actual_original_price
         offer.estimated_final_price = est_final_price
         offer.deal_url = deal_url
         offer.promo_start_date = promo_start_date
@@ -144,6 +148,7 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
             game_id=game.id,
             store_name=store_name,
             current_price=actual_price,
+            original_price=actual_original_price,
             historical_low=initial_low,
             estimated_final_price=est_final_price,
             deal_url=deal_url,
@@ -176,7 +181,20 @@ async def sync_games():
                 for item in giveaways:
                     try:
                         async with session.begin_nested():
-                            await upsert_game(session, item.title, item.sale_price, True, item.store, item.url, item.promo_start_date, item.promo_end_date, is_active=True, image_url=item.image_url)
+                            await upsert_game(
+                                session,
+                                item.title,
+                                item.sale_price,
+                                True,
+                                item.store,
+                                item.url,
+                                item.promo_start_date,
+                                item.promo_end_date,
+                                is_active=True,
+                                image_url=item.image_url,
+                                metacritic_score=item.metacritic_score,
+                                original_price=item.original_price
+                            )
                     except Exception as e:
                         logger.error(f"Error syncing giveaway '{item.title}': {str(e)}")
 
@@ -196,7 +214,9 @@ async def sync_games():
                                 is_active=True,
                                 usd_rate=usd_rate,
                                 payload_historical_low=item.historical_low,
-                                image_url=item.image_url
+                                image_url=item.image_url,
+                                metacritic_score=item.metacritic_score,
+                                original_price=item.original_price
                             )
                     except Exception as e:
                         logger.error(f"Error syncing CheapShark deal '{item.title}': {str(e)}")
@@ -217,7 +237,9 @@ async def sync_games():
                                 is_active=True,
                                 usd_rate=usd_rate,
                                 payload_historical_low=item.historical_low,
-                                image_url=item.image_url
+                                image_url=item.image_url,
+                                metacritic_score=item.metacritic_score,
+                                original_price=item.original_price
                             )
                     except Exception as e:
                         logger.error(f"Error syncing ITAD deal '{item.title}': {str(e)}")

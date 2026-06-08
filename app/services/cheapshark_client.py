@@ -47,6 +47,7 @@ class CheapSharkClient:
                             title=item.get("title"),
                             original_price=float(item.get("normalPrice")) if item.get("normalPrice") else 0.0,
                             sale_price=float(item.get("salePrice")) if item.get("salePrice") else 0.0,
+                            metacritic_score=int(item.get("metacriticScore")) if item.get("metacriticScore") and item.get("metacriticScore") != "0" else None,
                             store=str(item.get("storeID")) if item.get("storeID") else "Unknown", # Store ID from CheapShark
                             deal_rating=deal_rating,
                             deal_id=item.get("dealID"),

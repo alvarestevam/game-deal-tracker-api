@@ -48,7 +48,9 @@ class GamerPowerClient:
                     result.append(
                         GameDealSchema(
                             title=item.get("title", "Unknown"),
+                            original_price=None,
                             sale_price=0.0,
+                            metacritic_score=None,
                             store=item.get("platforms", "Unknown"),
                             url=item.get("open_giveaway_url", ""),
                             is_giveaway=True,

@@ -64,6 +64,7 @@ class ITADClient:
                         title=item.get("title", "Unknown"),
                         original_price=float(deal.get("regular", {}).get("amount", 0)),
                         sale_price=float(deal.get("price", {}).get("amount", 0)),
+                        metacritic_score=None, # ITAD doesn't provide Metacritic in this endpoint easily
                         store=deal.get("shop", {}).get("name", "Unknown"),
                         deal_id=item.get("id"),
                         url=deal.get("url", ""),
