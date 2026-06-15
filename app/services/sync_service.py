@@ -201,6 +201,8 @@ async def sync_games():
                 # Process deals
                 for item in deals:
                     try:
+                        # Se for Steam na CheapShark, não converte (já vem em BRL)
+                        effective_rate = 1.0 if item.store in ("1", "Steam") else usd_rate
                         async with session.begin_nested():
                             await upsert_game(
                                 session,
@@ -212,7 +214,7 @@ async def sync_games():
                                 item.promo_start_date,
                                 item.promo_end_date,
                                 is_active=True,
-                                usd_rate=usd_rate,
+                                usd_rate=effective_rate,
                                 payload_historical_low=item.historical_low,
                                 image_url=item.image_url,
                                 metacritic_score=item.metacritic_score,
