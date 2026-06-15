@@ -61,7 +61,10 @@ app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://137.131.157.169"],
+    allow_origins=[
+        "https://api.alvarestevam.online",
+        "https://alvarestevam.online"
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "X-API-Key"],
