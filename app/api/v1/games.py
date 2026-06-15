@@ -72,6 +72,10 @@ async def get_best_deals(request: Request, db: AsyncSession = Depends(get_db)):
             ~Game.title.ilike("%Artbook%"),
             ~Game.title.ilike("%Art Book%"),
             ~Game.title.ilike("%Ost%"),
+            ~Game.title.ilike("%Add-On%"),
+            ~Game.title.ilike("%Addon%"),
+            ~Game.title.ilike("%Bundle%"),
+            ~Game.title.ilike("%Collection%"),
             or_(
                 Game.metacritic_score >= 75,
                 deal_score >= 8.0
