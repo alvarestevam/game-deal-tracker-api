@@ -3,67 +3,67 @@ from typing import Dict
 STORE_DATA = {
     "Steam": {
         "name": "Steam",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/512px-Steam_icon_logo.svg.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=steampowered.com"
     },
     "Epic Games Store": {
         "name": "Epic Games Store",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Epic_Games_logo.svg/512px-Epic_Games_logo.svg.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=epicgames.com"
     },
     "GOG": {
         "name": "GOG",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/GOG.com_logo.svg/512px-GOG.com_logo.svg.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=gog.com"
     },
     "Itch.io": {
         "name": "Itch.io",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/Itch.io_logo.svg/512px-Itch.io_logo.svg.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=itch.io"
     },
     "IndieGala": {
         "name": "IndieGala",
-        "store_icon_url": "https://www.cheapshark.com/img/stores/logos/29.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=indiegala.com"
     },
     "PlayStation": {
         "name": "PlayStation Store",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Playstation_logo_colour.svg/512px-Playstation_logo_colour.svg.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=playstation.com"
     },
     "Xbox": {
         "name": "Xbox Store",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Xbox_logo_%282019%29.svg/512px-Xbox_logo_%282019%29.svg.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=xbox.com"
     },
     "Nintendo": {
         "name": "Nintendo eShop",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Nintendo.svg/512px-Nintendo.svg.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=nintendo.com"
     },
     "Humble Store": {
         "name": "Humble Store",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Humble_Bundle_logo.svg/512px-Humble_Bundle_logo.svg.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=humblebundle.com"
     },
     "Green Man Gaming": {
         "name": "Green Man Gaming",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/Green_Man_Gaming_logo.png/512px-Green_Man_Gaming_logo.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=greenmangaming.com"
     },
     "Direct2Drive": {
         "name": "Direct2Drive",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/Direct2Drive_logo.svg/512px-Direct2Drive_logo.svg.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=direct2drive.com"
     },
     "DLGamer": {
         "name": "DLGamer",
-        "store_icon_url": "https://www.cheapshark.com/img/stores/banners/32.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=dlgamer.com"
     },
     "Nuuvem": {
         "name": "Nuuvem",
-        "store_icon_url": "https://assets.nuuvem.com/assets/fe/images/nuuvem_logo-ab61245ad5.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=nuuvem.com"
     },
     "Fanatical": {
         "name": "Fanatical",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Fanatical_Logo.svg/512px-Fanatical_Logo.svg.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=fanatical.com"
     },
     "Ubisoft Store": {
         "name": "Ubisoft Store",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Ubisoft_logo.svg/512px-Ubisoft_logo.svg.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=ubisoft.com"
     },
     "Gamesplanet": {
         "name": "Gamesplanet",
-        "store_icon_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Logo_GamesPlanet.png/512px-Logo_GamesPlanet.png"
+        "store_icon_url": "https://www.google.com/s2/favicons?sz=128&domain=gamesplanet.com"
     },
     "Default": {
         "name": "Other Store",
