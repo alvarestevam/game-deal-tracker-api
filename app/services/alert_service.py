@@ -1,6 +1,6 @@
 from app.models.game import Game, GameOffer
 
-def _calculate_deal_score(game: Game, offer: GameOffer) -> float:
+def calculate_deal_score(game: Game, offer: GameOffer) -> float:
     """
     Calcula uma nota de oportunidade de 0 a 10 baseada na agressividade do desconto
     e se bateu o preço histórico.
@@ -50,7 +50,7 @@ def format_alert_message(game: Game, offer: GameOffer) -> str:
     """
     Gera uma string formatada em Markdown pronta para redes sociais.
     """
-    deal_score = _calculate_deal_score(game, offer)
+    deal_score = calculate_deal_score(game, offer)
     is_historical_low = offer.current_price <= offer.historical_low
 
     # Marcadores visuais

@@ -4,11 +4,14 @@ import re
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text, update
+from sqlalchemy.orm import selectinload
 from app.core.database import AsyncSessionLocal
 from app.models.game import Game, GameOffer
 from app.services.gamerpower_client import GamerPowerClient
 from app.services.cheapshark_client import CheapSharkClient
 from app.services.itad_client import ITADClient
+from app.services.alert_service import calculate_deal_score
+from app.services.telegram_service import send_telegram_alert
 from app.utils.text_utils import normalize_title
 
 logger = logging.getLogger(__name__)
@@ -257,7 +260,42 @@ async def sync_games():
                         logger.error(f"Error syncing ITAD deal '{item.title}': {str(e)}")
 
                 await session.commit()
-                logger.info("Game synchronization completed successfully.")
+                logger.info("Game synchronization completed successfully. Starting Telegram notifications...")
+
+                # Despacho de notificações Telegram
+                try:
+                    # Busca ofertas ativas não notificadas
+                    stmt = (
+                        select(GameOffer)
+                        .options(selectinload(GameOffer.game))
+                        .where(GameOffer.is_active == True, GameOffer.notified_telegram == False)
+                    )
+                    result = await session.execute(stmt)
+                    pending_offers = result.scalars().all()
+
+                    for offer in pending_offers:
+                        deal_score = calculate_deal_score(offer.game, offer)
+
+                        # Critérios de Elite: Preço 0 ou Deal Score >= 8.5
+                        if offer.current_price == 0 or deal_score >= 8.5:
+                            success = await send_telegram_alert(
+                                game_title=offer.game.title,
+                                current_price=offer.current_price,
+                                historical_low=offer.historical_low,
+                                store_name=offer.store_name,
+                                deal_url=offer.deal_url
+                            )
+                            if success:
+                                offer.notified_telegram = True
+                        else:
+                            # Se não é elite, marcamos como notificado para não avaliar novamente
+                            offer.notified_telegram = True
+
+                    await session.commit()
+                    logger.info("Processamento de notificações Telegram finalizado.")
+                except Exception as e:
+                    logger.error(f"Erro ao processar notificações Telegram: {str(e)}")
+
             except Exception as e:
                 await session.rollback()
                 logger.error(f"Database error during synchronization: {str(e)}")

@@ -45,6 +45,11 @@ async def ensure_original_price_column(engine):
     async with engine.begin() as conn:
         await conn.execute(text("ALTER TABLE game_offers ADD COLUMN IF NOT EXISTS original_price FLOAT;"))
 
+async def ensure_notified_telegram_column(engine):
+    """Garante que a coluna notified_telegram existe na tabela game_offers."""
+    async with engine.begin() as conn:
+        await conn.execute(text("ALTER TABLE game_offers ADD COLUMN IF NOT EXISTS notified_telegram BOOLEAN DEFAULT FALSE NOT NULL;"))
+
 async def backfill_slugs(engine):
     """Gera slugs para registros existentes que ainda não possuem."""
     from app.utils.text_utils import normalize_title
