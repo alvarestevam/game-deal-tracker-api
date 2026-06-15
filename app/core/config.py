@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     ITAD_CLIENT_ID: str = ""
     ITAD_CLIENT_SECRET: str = ""
 
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

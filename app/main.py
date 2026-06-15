@@ -10,7 +10,8 @@ from app.api.v1.games import router as games_router
 from app.core.config import settings
 from app.core.database import (
     engine, Base, ensure_image_url_column, ensure_slug_column,
-    ensure_metacritic_column, ensure_original_price_column, backfill_slugs
+    ensure_metacritic_column, ensure_original_price_column,
+    ensure_notified_telegram_column, backfill_slugs
 )
 from app.models.game import Game
 from app.services.sync_service import sync_games
@@ -31,6 +32,7 @@ async def lifespan(app: FastAPI):
     await ensure_slug_column(engine)
     await ensure_metacritic_column(engine)
     await ensure_original_price_column(engine)
+    await ensure_notified_telegram_column(engine)
     await backfill_slugs(engine)
 
     # Configure and start APScheduler
