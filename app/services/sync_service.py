@@ -16,6 +16,11 @@ from app.utils.text_utils import normalize_title
 
 logger = logging.getLogger(__name__)
 
+BLACK_LIST_KEYWORDS = [
+    "dlc", "soundtrack", "ost", "expansion", "expansão",
+    "pass", "pack", "upgrade", "artbook", "skin", "bundle upgrade"
+]
+
 def _sanitize_steam_image_url(image_url: str | None) -> str | None:
     """
     Transforma URLs de miniaturas da Steam em imagens de alta resolução e aplica
@@ -274,6 +279,13 @@ async def sync_games():
                     pending_offers = result.scalars().all()
 
                     for offer in pending_offers:
+                        # Validação de Blacklist (DLCs, Expansões, etc)
+                        game_title_lower = offer.game.title.lower()
+                        if any(keyword in game_title_lower for keyword in BLACK_LIST_KEYWORDS):
+                            logger.info(f"Oferta ignorada por blacklist (DLC/Item secundário): {offer.game.title}")
+                            offer.notified_telegram = True
+                            continue
+
                         deal_score = calculate_deal_score(offer.game, offer)
 
                         # Critérios de Elite: Preço 0 ou Deal Score >= 8.5
