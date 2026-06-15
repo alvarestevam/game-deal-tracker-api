@@ -6,17 +6,17 @@ from datetime import datetime
 def test_map_store_steam_id():
     result = map_store("1")
     assert result["name"] == "Steam"
-    assert "Steam_icon_logo.svg.png" in result["store_icon_url"]
+    assert "google.com/s2/favicons" in result["store_icon_url"]
 
 def test_map_store_epic_substring():
     result = map_store("Epic Games Store")
     assert result["name"] == "Epic Games Store"
-    assert "Epic_Games_logo.svg.png" in result["store_icon_url"]
+    assert "google.com/s2/favicons" in result["store_icon_url"]
 
 def test_map_store_gog_substring():
     result = map_store("GOG.com")
     assert result["name"] == "GOG"
-    assert "GOG.com_logo.svg.png" in result["store_icon_url"]
+    assert "google.com/s2/favicons" in result["store_icon_url"]
 
 def test_map_store_unknown():
     result = map_store("My Super Store")
@@ -40,7 +40,7 @@ def test_offer_response_mapping():
     )
     assert offer.store_name == "Steam"
     assert offer.store_icon_url is not None
-    assert "Steam_icon_logo.svg.png" in offer.store_icon_url
+    assert "google.com/s2/favicons" in offer.store_icon_url
 
 def test_game_response_image_fallback():
     game = GameResponse(
@@ -75,7 +75,7 @@ def test_game_audit_response_mapping():
     )
     assert game.offers[0].store_name == "Epic Games Store"
     assert game.offers[0].store_icon_url is not None
-    assert "Epic_Games_logo.svg.png" in game.offers[0].store_icon_url
+    assert "google.com/s2/favicons" in game.offers[0].store_icon_url
     assert game.is_historical_low == True
 
 def test_game_audit_response_image_fallback():

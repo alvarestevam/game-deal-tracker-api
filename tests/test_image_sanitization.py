@@ -13,10 +13,8 @@ def test_sanitize_steam_image_url_different_size():
 
 def test_sanitize_steam_image_url_with_query_params():
     url = "https://cdn.akamai.steamstatic.com/steam/apps/12345/capsule_sm_120.jpg?t=123456"
-    expected = "https://cdn.akamai.steamstatic.com/steam/apps/12345/header.jpg?t=123456"
-    # Note: re.sub(r"capsule_.*\.jpg", "header.jpg", url) will replace everything from capsule_ to .jpg
-    # If the URL is "https://.../capsule_sm_120.jpg?t=123456", it will replace "capsule_sm_120.jpg" with "header.jpg"
-    # result: "https://.../header.jpg?t=123456"
+    expected = "https://cdn.akamai.steamstatic.com/steam/apps/12345/header.jpg"
+    # Note: Structural rewrite to Akamai removes query params to bypass WAF as requested
     assert _sanitize_steam_image_url(url) == expected
 
 def test_sanitize_steam_image_url_non_steam():
@@ -31,7 +29,7 @@ def test_sanitize_steam_image_url_empty():
 
 def test_sanitize_steam_image_url_generic_steam():
     url = "https://steamcdn-a.akamaihd.net/steam/apps/123/capsule_231x87.jpg"
-    expected = "https://steamcdn-a.akamaihd.net/steam/apps/123/header.jpg"
+    expected = "https://cdn.akamai.steamstatic.com/steam/apps/123/header.jpg"
     assert _sanitize_steam_image_url(url) == expected
 
 def test_sanitize_gamesplanet_image_url_dimension_prefix():

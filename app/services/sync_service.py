@@ -14,10 +14,20 @@ from app.utils.text_utils import normalize_title
 logger = logging.getLogger(__name__)
 
 def _sanitize_steam_image_url(image_url: str | None) -> str | None:
-    """Transforma URLs de miniaturas da Steam em imagens de alta resolução."""
+    """
+    Transforma URLs de miniaturas da Steam em imagens de alta resolução e aplica
+    rewrite estrutural para a CDN da Akamai (bypass de bloqueio WAF/Hotlink).
+    """
     if not image_url:
         return image_url
 
+    # 1. Rewrite estrutural para Akamai (Padrão: .../steam/apps/{app_id}/...)
+    steam_app_match = re.search(r"steam/apps/(\d+)", image_url)
+    if steam_app_match and ("steamstatic" in image_url or "steam" in image_url):
+        app_id = steam_app_match.group(1)
+        return f"https://cdn.akamai.steamstatic.com/steam/apps/{app_id}/header.jpg"
+
+    # 2. Fallback para outros padrões steamstatic que não contenham /apps/
     if "steamstatic" in image_url or "steam" in image_url:
         # Substitui sufixos de baixa resolução (como capsule_sm_120.jpg) pelo padrão de alta resolução
         return re.sub(r"capsule_.*\.jpg", "header.jpg", image_url)
