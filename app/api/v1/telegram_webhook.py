@@ -119,6 +119,7 @@ async def telegram_webhook(update: TelegramUpdate, db: AsyncSession = Depends(ge
                 for offer, score in top_offers:
                     price_str = "GRÁTIS" if offer.current_price == 0 else f"R$ {offer.current_price:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                     msg = (
+                        f'<a href="{offer.deal_url}">&#8203;</a>'
                         f"🎮 <b>{offer.game.title}</b>\n"
                         f"💰 Preço: {price_str} | ⭐ Nota: {score}/10"
                     )
@@ -134,7 +135,7 @@ async def telegram_webhook(update: TelegramUpdate, db: AsyncSession = Depends(ge
                         "chat_id": chat_id,
                         "text": msg,
                         "parse_mode": "HTML",
-                        "disable_web_page_preview": True,
+                        "disable_web_page_preview": False,
                         "reply_markup": reply_markup
                     }
                     await client.post(telegram_url, json=payload, headers=headers, timeout=10.0)
