@@ -1,6 +1,7 @@
 import logging
 import httpx
 import re
+import time
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text, update
@@ -173,7 +174,17 @@ async def upsert_game(session: AsyncSession, title: str, price: float, is_free: 
         session.add(new_offer)
 
 async def sync_games():
+    start_time = time.perf_counter()
     logger.info("Starting game synchronization...")
+
+    # Telemetria
+    total_processed_offers = 0
+    external_apis = set()
+    processed_stores = set()
+    new_elite_offers = 0
+    dm_alerts_sent = 0
+    db_status = "Saudável"
+
     gp_client = GamerPowerClient()
     cs_client = CheapSharkClient()
     itad_client = ITADClient()
@@ -183,16 +194,35 @@ async def sync_games():
         logger.info(f"Cotação do dólar obtida: {usd_rate}")
 
         giveaways = await gp_client.get_pc_giveaways()
+        if giveaways:
+            external_apis.add("GamerPower")
+            total_processed_offers += len(giveaways)
+
         deals = await cs_client.get_deals()
+        if deals:
+            external_apis.add("CheapShark")
+            total_processed_offers += len(deals)
+
         itad_deals = await itad_client.get_deals()
+        if itad_deals:
+            external_apis.add("IsThereAnyDeal")
+            total_processed_offers += len(itad_deals)
 
         async with AsyncSessionLocal() as session:
+            # Teste de integridade do banco
+            try:
+                await session.execute(text("SELECT 1"))
+            except Exception as e:
+                db_status = f"Erro: {str(e)}"
+                logger.error(f"Falha na integridade do banco: {str(e)}")
+
             try:
                 # Deativa todas as ofertas antes de sincronizar
                 await session.execute(text("UPDATE game_offers SET is_active = False"))
 
                 # Process giveaways
                 for item in giveaways:
+                    processed_stores.add(item.store or "Unknown")
                     try:
                         async with session.begin_nested():
                             await upsert_game(
@@ -214,6 +244,9 @@ async def sync_games():
 
                 # Process deals
                 for item in deals:
+                    store_name = item.store
+                    if store_name == "1": store_name = "Steam"
+                    processed_stores.add(store_name or "Unknown")
                     try:
                         # Se for Steam na CheapShark, não converte (já vem em BRL)
                         effective_rate = 1.0 if item.store in ("1", "Steam") else usd_rate
@@ -239,6 +272,7 @@ async def sync_games():
 
                 # Process ITAD deals
                 for item in itad_deals:
+                    processed_stores.add(item.store or "Unknown")
                     try:
                         async with session.begin_nested():
                             await upsert_game(
@@ -279,6 +313,7 @@ async def sync_games():
 
                         # Critérios de Elite: Preço 0 ou Deal Score >= 7.0
                         if offer.current_price == 0 or deal_score >= 7.0:
+                            new_elite_offers += 1
                             success = await send_telegram_alert(
                                 game_title=offer.game.title,
                                 current_price=offer.current_price,
@@ -314,7 +349,7 @@ async def sync_games():
                                     for alert in user_alerts:
                                         if alert.keyword in game_title_lower:
                                             logger.info(f"Match de alerta privado! Usuário: {alert.chat_id}, Keyword: {alert.keyword}, Jogo: {offer.game.title}")
-                                            await send_telegram_alert(
+                                            success_dm = await send_telegram_alert(
                                                 game_title=offer.game.title,
                                                 current_price=offer.current_price,
                                                 historical_low=offer.historical_low,
@@ -322,6 +357,8 @@ async def sync_games():
                                                 deal_url=offer.deal_url,
                                                 chat_id=alert.chat_id
                                             )
+                                            if success_dm:
+                                                dm_alerts_sent += 1
 
                         logger.info("Processamento de alertas privados finalizado.")
                     except Exception as alert_error:
@@ -336,3 +373,36 @@ async def sync_games():
                 raise
     except Exception as e:
         logger.error(f"Error during game synchronization: {str(e)}")
+    finally:
+        # Disparo do Relatório Operacional (NOC Report)
+        execution_time = round(time.perf_counter() - start_time, 2)
+        apis_str = ", ".join(sorted(list(external_apis))) if external_apis else "Nenhuma"
+        stores_str = ", ".join(sorted(list(processed_stores))) if processed_stores else "Nenhuma"
+
+        noc_report = (
+            "🤖 NOC - Relatório de Sync\n"
+            f"⏱️ Tempo de execução: {execution_time}s\n"
+            f"🔗 APIs Utilizadas: {apis_str}\n"
+            f"🏪 Lojas Processadas: {stores_str}\n"
+            f"📥 Ofertas processadas: {total_processed_offers}\n"
+            f"✨ Novas de Elite inseridas: {new_elite_offers}\n"
+            f"🔔 Alertas disparados na DM: {dm_alerts_sent}\n"
+            f"🟢 Status do Banco: {db_status}"
+        )
+
+        if settings.ADMIN_CHAT_ID:
+            try:
+                telegram_url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+                payload = {
+                    "chat_id": settings.ADMIN_CHAT_ID,
+                    "text": noc_report,
+                    "parse_mode": "HTML"
+                }
+                headers = {"User-Agent": "GameDealTracker/1.0 (contato@teste.com)"}
+                async with httpx.AsyncClient() as client:
+                    await client.post(telegram_url, json=payload, headers=headers, timeout=10.0)
+                logger.info("Relatório NOC enviado para o administrador.")
+            except Exception as e:
+                logger.error(f"Erro ao enviar relatório NOC: {str(e)}")
+        else:
+            logger.warning("ADMIN_CHAT_ID não configurado. Relatório NOC não enviado.")

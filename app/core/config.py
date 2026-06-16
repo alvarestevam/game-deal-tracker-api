@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""
+    ADMIN_CHAT_ID: str = ""
 
     @property
     def DATABASE_URL(self) -> str:
