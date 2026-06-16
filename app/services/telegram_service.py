@@ -4,11 +4,13 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-async def send_telegram_alert(game_title: str, current_price: float, historical_low: float, store_name: str, deal_url: str):
+async def send_telegram_alert(game_title: str, current_price: float, historical_low: float, store_name: str, deal_url: str, chat_id: int | str | None = None):
     """
-    Envia um alerta de oferta para o canal do Telegram configurado.
+    Envia um alerta de oferta para o canal do Telegram configurado ou um chat específico.
     """
-    if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHAT_ID:
+    target_chat_id = chat_id or settings.TELEGRAM_CHAT_ID
+
+    if not settings.TELEGRAM_BOT_TOKEN or not target_chat_id:
         logger.warning("Telegram Bot Token ou Chat ID não configurados. Pulando envio de alerta.")
         return
 
@@ -37,7 +39,7 @@ async def send_telegram_alert(game_title: str, current_price: float, historical_
     }
 
     payload = {
-        "chat_id": settings.TELEGRAM_CHAT_ID,
+        "chat_id": target_chat_id,
         "text": message,
         "parse_mode": "HTML",
         "disable_web_page_preview": False,
