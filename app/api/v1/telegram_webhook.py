@@ -77,6 +77,7 @@ async def telegram_webhook(update: TelegramUpdate, db: AsyncSession = Depends(ge
             "/gog - Ofertas na GOG\n"
             "/buscar &lt;termo&gt; - Pesquisar ofertas ativas\n"
             "/alerta &lt;termo&gt; - Criar alerta personalizado\n"
+            "/meus_alertas - Listar meus alertas\n"
             "/remover_alerta &lt;termo&gt; - Remover alerta\n"
             "/help - Lista de comandos"
         )
@@ -91,6 +92,7 @@ async def telegram_webhook(update: TelegramUpdate, db: AsyncSession = Depends(ge
             "/gog - Melhores ofertas ativas na GOG\n"
             "/buscar &lt;termo&gt; - Pesquisar ofertas ativas por título\n"
             "/alerta &lt;termo&gt; - Receber notificação na DM quando o jogo entrar em promoção\n"
+            "/meus_alertas - Listar todos os seus alertas ativos\n"
             "/remover_alerta &lt;termo&gt; - Remover um alerta existente\n"
             "/sobre - Sobre este projeto"
         )
@@ -158,6 +160,23 @@ async def telegram_webhook(update: TelegramUpdate, db: AsyncSession = Depends(ge
                         }
                         await client.post(telegram_url, json=payload, headers=headers, timeout=10.0)
 
+    elif text == "/meus_alertas":
+        stmt = select(UserAlert).where(UserAlert.chat_id == chat_id)
+        result = await db.execute(stmt)
+        alerts = result.scalars().all()
+
+        if not alerts:
+            message = "Você não possui alertas configurados. Use <code>/alerta &lt;termo&gt;</code> para criar um!"
+        else:
+            message = "🔔 <b>Seus Alertas Ativos:</b>\n\n"
+            for alert in alerts:
+                message += f"• <code>{alert.keyword}</code>\n"
+            message += "\nPara remover, use <code>/remover_alerta &lt;termo&gt;</code>"
+
+        payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+        async with httpx.AsyncClient() as client:
+            await client.post(telegram_url, json=payload, headers=headers, timeout=10.0)
+
     elif text.startswith("/alerta "):
         term = text.replace("/alerta ", "").strip()
         if not term:
@@ -178,8 +197,8 @@ async def telegram_webhook(update: TelegramUpdate, db: AsyncSession = Depends(ge
         async with httpx.AsyncClient() as client:
             await client.post(telegram_url, json=payload, headers=headers, timeout=10.0)
 
-    elif text.startswith("/remover_alerta "):
-        term = text.replace("/remover_alerta ", "").strip()
+    elif text.startswith("/remover_alerta"):
+        term = text.replace("/remover_alerta", "").strip()
         if not term:
             message = "⚠️ Por favor, digite o termo do alerta a remover. Ex: <code>/remover_alerta cyberpunk</code>"
         else:
