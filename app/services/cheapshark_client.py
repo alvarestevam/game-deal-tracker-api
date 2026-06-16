@@ -29,6 +29,13 @@ class CheapSharkClient:
 
                 result_map = {}
                 game_ids = []
+
+                CHEAPSHARK_STORES = {
+                    "1": "Steam", "2": "GamersGate", "3": "GreenManGaming",
+                    "4": "Amazon", "5": "GameStop", "7": "GOG", "8": "Origin",
+                    "11": "Humble Store", "13": "Uplay", "25": "Epic Games Store"
+                }
+
                 for item in deals:
                     deal_rating = float(item.get("dealRating", 0))
                     if deal_rating > 8.0:
@@ -43,12 +50,15 @@ class CheapSharkClient:
                             except (ValueError, TypeError):
                                 pass
 
+                        store_id = str(item.get("storeID")) if item.get("storeID") else None
+                        store_name = CHEAPSHARK_STORES.get(store_id, "Loja Desconhecida") if store_id else "Loja Desconhecida"
+
                         result_map[game_id] = GameDealSchema(
                             title=item.get("title"),
                             original_price=float(item.get("normalPrice")) if item.get("normalPrice") else 0.0,
                             sale_price=float(item.get("salePrice")) if item.get("salePrice") else 0.0,
                             metacritic_score=int(item.get("metacriticScore")) if item.get("metacriticScore") and item.get("metacriticScore") != "0" else None,
-                            store=str(item.get("storeID")) if item.get("storeID") else "Unknown", # Store ID from CheapShark
+                            store=store_name,
                             deal_rating=deal_rating,
                             deal_id=item.get("dealID"),
                             url=f"https://www.cheapshark.com/redirect?dealID={item.get('dealID')}",

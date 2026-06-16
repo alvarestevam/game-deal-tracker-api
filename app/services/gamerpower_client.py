@@ -28,6 +28,10 @@ class GamerPowerClient:
 
                 result = []
                 for item in giveaways:
+                    # Filtro estrito: processa apenas itens do tipo "Game"
+                    if item.get("type") != "Game":
+                        continue
+
                     published_date_str = item.get("published_date")
                     end_date_str = item.get("end_date")
 
