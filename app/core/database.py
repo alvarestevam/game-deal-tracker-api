@@ -53,6 +53,7 @@ async def ensure_notified_telegram_column(engine):
 async def ensure_user_alerts_table(engine):
     """Garante que a tabela user_alerts existe."""
     async with engine.begin() as conn:
+        # Chamada 1: Apenas a criação da tabela
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS user_alerts (
                 id UUID PRIMARY KEY,
@@ -60,9 +61,13 @@ async def ensure_user_alerts_table(engine):
                 keyword VARCHAR NOT NULL,
                 created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() at time zone 'utc')
             );
-            CREATE INDEX IF NOT EXISTS ix_user_alerts_chat_id ON user_alerts (chat_id);
-            CREATE INDEX IF NOT EXISTS ix_user_alerts_keyword ON user_alerts (keyword);
         """))
+
+        # Chamada 2: Apenas o índice do chat_id
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_alerts_chat_id ON user_alerts (chat_id);"))
+
+        # Chamada 3: Apenas o índice da keyword
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_alerts_keyword ON user_alerts (keyword);"))
 
 async def backfill_slugs(engine):
     """Gera slugs para registros existentes que ainda não possuem."""
