@@ -8,6 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.api.v1.health import router as health_router
 from app.api.v1.games import router as games_router
 from app.api.v1.telegram import router as telegram_router
+from app.api.v1.telegram_webhook import router as telegram_webhook_router
 from app.core.config import settings
 from app.core.database import (
     engine, Base, ensure_image_url_column, ensure_slug_column,
@@ -83,6 +84,10 @@ app.include_router(
     telegram_router,
     prefix=settings.API_V1_STR,
     dependencies=[Depends(verify_api_key)]
+)
+app.include_router(
+    telegram_webhook_router,
+    prefix=settings.API_V1_STR
 )
 
 @app.get("/")
