@@ -6,7 +6,6 @@ from typing import List
 from app.core.database import get_db
 from app.models.game import Game, GameOffer
 from app.schemas.telegram import TelegramPreviewResponse
-from app.services.sync_service import BLACK_LIST_KEYWORDS
 from app.services.alert_service import calculate_deal_score
 
 router = APIRouter()
@@ -27,11 +26,6 @@ async def get_telegram_preview(db: AsyncSession = Depends(get_db)):
 
     preview_list = []
     for offer in offers:
-        # Validação de Blacklist (DLCs, Expansões, etc)
-        game_title_lower = offer.game.title.lower()
-        if any(keyword in game_title_lower for keyword in BLACK_LIST_KEYWORDS):
-            continue
-
         deal_score = calculate_deal_score(offer.game, offer)
 
         # Critérios de Elite: Preço 0 ou Deal Score >= 8.5
