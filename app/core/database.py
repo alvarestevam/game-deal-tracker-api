@@ -50,6 +50,20 @@ async def ensure_notified_telegram_column(engine):
     async with engine.begin() as conn:
         await conn.execute(text("ALTER TABLE game_offers ADD COLUMN IF NOT EXISTS notified_telegram BOOLEAN DEFAULT FALSE NOT NULL;"))
 
+async def ensure_user_alerts_table(engine):
+    """Garante que a tabela user_alerts existe."""
+    async with engine.begin() as conn:
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_alerts (
+                id UUID PRIMARY KEY,
+                chat_id BIGINT NOT NULL,
+                keyword VARCHAR NOT NULL,
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() at time zone 'utc')
+            );
+            CREATE INDEX IF NOT EXISTS ix_user_alerts_chat_id ON user_alerts (chat_id);
+            CREATE INDEX IF NOT EXISTS ix_user_alerts_keyword ON user_alerts (keyword);
+        """))
+
 async def backfill_slugs(engine):
     """Gera slugs para registros existentes que ainda não possuem."""
     from app.utils.text_utils import normalize_title

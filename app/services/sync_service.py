@@ -7,6 +7,7 @@ from sqlalchemy import select, text, update
 from sqlalchemy.orm import selectinload
 from app.core.database import AsyncSessionLocal
 from app.models.game import Game, GameOffer
+from app.models.user_alert import UserAlert
 from app.services.gamerpower_client import GamerPowerClient
 from app.services.cheapshark_client import CheapSharkClient
 from app.services.itad_client import ITADClient
@@ -292,7 +293,40 @@ async def sync_games():
                             offer.notified_telegram = True
 
                     await session.commit()
-                    logger.info("Processamento de notificações Telegram finalizado.")
+                    logger.info("Processamento de notificações Telegram (Canal) finalizado.")
+
+                    # --- Rotina de Alertas Privados ---
+                    try:
+                        # Busca todos os alertas ativos
+                        stmt_alerts = select(UserAlert)
+                        result_alerts = await session.execute(stmt_alerts)
+                        user_alerts = result_alerts.scalars().all()
+
+                        if user_alerts:
+                            # Re-identifica ofertas de elite do ciclo atual (que acabaram de ser processadas)
+                            # Para simplificar, usamos as mesmas pending_offers e aplicamos o filtro de elite
+                            for offer in pending_offers:
+                                deal_score = calculate_deal_score(offer.game, offer)
+                                if offer.current_price == 0 or deal_score >= 7.0:
+                                    game_title_lower = offer.game.title.lower()
+
+                                    # Verifica matches para cada alerta
+                                    for alert in user_alerts:
+                                        if alert.keyword in game_title_lower:
+                                            logger.info(f"Match de alerta privado! Usuário: {alert.chat_id}, Keyword: {alert.keyword}, Jogo: {offer.game.title}")
+                                            await send_telegram_alert(
+                                                game_title=offer.game.title,
+                                                current_price=offer.current_price,
+                                                historical_low=offer.historical_low,
+                                                store_name=offer.store_name,
+                                                deal_url=offer.deal_url,
+                                                chat_id=alert.chat_id
+                                            )
+
+                        logger.info("Processamento de alertas privados finalizado.")
+                    except Exception as alert_error:
+                        logger.error(f"Erro ao processar alertas privados: {str(alert_error)}")
+
                 except Exception as e:
                     logger.error(f"Erro ao processar notificações Telegram: {str(e)}")
 
