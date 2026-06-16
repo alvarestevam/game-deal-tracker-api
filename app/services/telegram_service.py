@@ -24,15 +24,23 @@ async def send_telegram_alert(game_title: str, current_price: float, historical_
         f"🎮 <b>Jogo:</b> {game_title}\n"
         f"💰 <b>Preço Atual:</b> R$ {price_str}\n"
         f"📉 <b>Menor Preço Histórico:</b> R$ {low_str}\n"
-        f"🏪 <b>Loja:</b> {store_name}\n\n"
-        f'🔗 <a href="{deal_url}">Clique aqui para aproveitar a oferta</a>'
+        f"🏪 <b>Loja:</b> {store_name}"
     )
+
+    # Configuração do Botão Inline
+    button_text = "🎁 Resgatar Jogo" if current_price == 0 else "▶️ Ir para a Oferta"
+    reply_markup = {
+        "inline_keyboard": [
+            [{"text": button_text, "url": deal_url}]
+        ]
+    }
 
     payload = {
         "chat_id": settings.TELEGRAM_CHAT_ID,
         "text": message,
         "parse_mode": "HTML",
-        "disable_web_page_preview": False
+        "disable_web_page_preview": True,
+        "reply_markup": reply_markup
     }
 
     try:
