@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
 
     # Configure and start APScheduler
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(sync_games, 'interval', hours=6)
+    scheduler.add_job(sync_games, 'interval', hours=2)
     # Execute once on startup to populate database
     scheduler.add_job(sync_games)
     scheduler.start()
