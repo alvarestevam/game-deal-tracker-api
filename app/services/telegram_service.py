@@ -20,6 +20,7 @@ async def send_telegram_alert(game_title: str, current_price: float, historical_
 
     # Template HTML conforme instruções
     message = (
+        f'<a href="{deal_url}">&#8203;</a>'
         "🔥 <b>OFERTA DE ELITE ENCONTRADA!</b> 🔥\n\n"
         f"🎮 <b>Jogo:</b> {game_title}\n"
         f"💰 <b>Preço Atual:</b> R$ {price_str}\n"
@@ -39,7 +40,7 @@ async def send_telegram_alert(game_title: str, current_price: float, historical_
         "chat_id": settings.TELEGRAM_CHAT_ID,
         "text": message,
         "parse_mode": "HTML",
-        "disable_web_page_preview": True,
+        "disable_web_page_preview": False,
         "reply_markup": reply_markup
     }
 
