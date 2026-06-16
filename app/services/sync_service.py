@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text, update
 from sqlalchemy.orm import selectinload
 from app.core.database import AsyncSessionLocal
+from app.core.config import settings
 from app.models.game import Game, GameOffer
 from app.models.user_alert import UserAlert
 from app.services.gamerpower_client import GamerPowerClient
