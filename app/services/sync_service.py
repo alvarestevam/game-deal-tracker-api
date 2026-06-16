@@ -276,8 +276,8 @@ async def sync_games():
                     for offer in pending_offers:
                         deal_score = calculate_deal_score(offer.game, offer)
 
-                        # Critérios de Elite: Preço 0 ou Deal Score >= 8.5
-                        if offer.current_price == 0 or deal_score >= 8.5:
+                        # Critérios de Elite: Preço 0 ou Deal Score >= 7.0
+                        if offer.current_price == 0 or deal_score >= 7.0:
                             success = await send_telegram_alert(
                                 game_title=offer.game.title,
                                 current_price=offer.current_price,
