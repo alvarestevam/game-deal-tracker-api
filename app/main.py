@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.api.v1.health import router as health_router
 from app.api.v1.games import router as games_router
+from app.api.v1.telegram import router as telegram_router
 from app.core.config import settings
 from app.core.database import (
     engine, Base, ensure_image_url_column, ensure_slug_column,
@@ -75,6 +76,11 @@ app.add_middleware(
 app.include_router(health_router, prefix=settings.API_V1_STR)
 app.include_router(
     games_router,
+    prefix=settings.API_V1_STR,
+    dependencies=[Depends(verify_api_key)]
+)
+app.include_router(
+    telegram_router,
     prefix=settings.API_V1_STR,
     dependencies=[Depends(verify_api_key)]
 )
