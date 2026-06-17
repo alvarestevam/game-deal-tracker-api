@@ -16,3 +16,5 @@ class GameDealSchema(BaseModel):
     promo_start_date: Optional[datetime] = None
     promo_end_date: Optional[datetime] = None
     image_url: Optional[str] = None
+    native_type: Optional[str] = None
+    steam_appid: Optional[str] = None
