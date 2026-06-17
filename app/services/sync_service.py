@@ -13,7 +13,6 @@ from app.models.user_alert import UserAlert
 from app.services.gamerpower_client import GamerPowerClient
 from app.services.cheapshark_client import CheapSharkClient
 from app.services.itad_client import ITADClient
-from app.services.alert_service import calculate_deal_score
 from app.services.telegram_service import send_telegram_alert
 from app.utils.text_utils import normalize_title
 from app.schemas.game_deal import GameDealSchema
@@ -21,36 +20,27 @@ from app.schemas.game_deal import GameDealSchema
 logger = logging.getLogger(__name__)
 
 ELITE_STORES = ["steam", "epic games", "prime gaming", "green man gaming", "gamesplanet", "nuuvem"]
-BLOCKED_TYPES = ["dlc", "music", "advertising", "hardware"]
+BLOCKED_TYPES = ["dlc", "music", "advertising", "series"]
 
 async def _is_valid_deal(item: GameDealSchema, client: httpx.AsyncClient) -> bool:
     """
-    Pipeline de validação heurística:
-    1. Whitelist de Lojas (Nível A)
-    2. Barreira Econômica para Giveaways (> R$ 20)
-    3. Filtro de Tipagem (DLCs, Music, etc.)
-    4. Regra de Confiança (Fallback)
+    Pipeline de Elite consolidado para validação purista:
+    Degrau 1 (Whitelist de Lojas): Apenas lojas permitidas.
+    Degrau 2 (Filtro de Tipagem): Bloqueia conteúdo extra (DLCs, Music, etc.).
     """
-    # 1. Whitelist de Lojas (Elite Stores)
+    # Degrau 1: Whitelist de Lojas
     store_lower = item.store.lower() if item.store else ""
     if not any(elite in store_lower for elite in ELITE_STORES):
         logger.info(f"Discarding {item.title}: Store '{item.store}' is not in elite whitelist.")
         return False
 
-    # 2. Barreira Econômica para Giveaways
-    if item.sale_price == 0 or item.is_giveaway:
-        original_price = item.original_price or 0.0
-        if original_price < 20.00:
-            logger.info(f"Discarding giveaway {item.title}: Original price {original_price} is below barrier (20.00).")
-            return False
-
-    # 3. Filtro de Tipagem (Nativo)
+    # Degrau 2: Filtro de Tipagem (Nativo)
     if item.native_type:
         if item.native_type.lower() in BLOCKED_TYPES:
             logger.info(f"Discarding {item.title}: Native type '{item.native_type}' is blocked.")
             return False
 
-    # 4. Filtro de Tipagem (Fallback Steam API)
+    # Degrau 2: Filtro de Tipagem (Fallback Steam API)
     if item.steam_appid and item.steam_appid != "0":
         try:
             url = f"https://store.steampowered.com/api/appdetails?appids={item.steam_appid}"
@@ -67,7 +57,7 @@ async def _is_valid_deal(item: GameDealSchema, client: httpx.AsyncClient) -> boo
         except Exception as e:
             logger.warning(f"Error checking Steam API for {item.title} ({item.steam_appid}): {str(e)}")
 
-    # 5. Regra de Confiança: Se passou pelos filtros acima, é aprovado
+    # Estado Final: Se passou pelos filtros acima, é aprovado.
     return True
 
 def _sanitize_steam_image_url(image_url: str | None) -> str | None:
@@ -233,7 +223,7 @@ async def sync_games():
     total_processed_offers = 0
     external_apis = set()
     processed_stores = set()
-    new_elite_offers = 0
+    new_offers_notified = 0
     dm_alerts_sent = 0
     db_status = "Saudável"
 
@@ -269,7 +259,7 @@ async def sync_games():
                 logger.error(f"Falha na integridade do banco: {str(e)}")
 
             try:
-                # Deativa todas as ofertas antes de sincronizar
+                # Desativa todas as ofertas antes de sincronizar
                 await session.execute(text("UPDATE game_offers SET is_active = False"))
 
                 # Process giveaways
@@ -370,22 +360,16 @@ async def sync_games():
                     pending_offers = result.scalars().all()
 
                     for offer in pending_offers:
-                        deal_score = calculate_deal_score(offer.game, offer)
-
-                        # Critérios de Elite: Preço 0 ou Deal Score >= 7.0
-                        if offer.current_price == 0 or deal_score >= 7.0:
-                            new_elite_offers += 1
-                            success = await send_telegram_alert(
-                                game_title=offer.game.title,
-                                current_price=offer.current_price,
-                                historical_low=offer.historical_low,
-                                store_name=offer.store_name,
-                                deal_url=offer.deal_url
-                            )
-                            if success:
-                                offer.notified_telegram = True
-                        else:
-                            # Se não é elite, marcamos como notificado para não avaliar novamente
+                        # Purismo: Todas as ofertas que chegaram aqui são válidas (passaram no _is_valid_deal)
+                        new_offers_notified += 1
+                        success = await send_telegram_alert(
+                            game_title=offer.game.title,
+                            current_price=offer.current_price,
+                            historical_low=offer.historical_low,
+                            store_name=offer.store_name,
+                            deal_url=offer.deal_url
+                        )
+                        if success:
                             offer.notified_telegram = True
 
                     await session.commit()
@@ -399,27 +383,24 @@ async def sync_games():
                         user_alerts = result_alerts.scalars().all()
 
                         if user_alerts:
-                            # Re-identifica ofertas de elite do ciclo atual (que acabaram de ser processadas)
-                            # Para simplificar, usamos as mesmas pending_offers e aplicamos o filtro de elite
+                            # Re-identifica ofertas válidas do ciclo atual (pending_offers)
                             for offer in pending_offers:
-                                deal_score = calculate_deal_score(offer.game, offer)
-                                if offer.current_price == 0 or deal_score >= 7.0:
-                                    game_title_lower = offer.game.title.lower()
+                                game_title_lower = offer.game.title.lower()
 
-                                    # Verifica matches para cada alerta
-                                    for alert in user_alerts:
-                                        if alert.keyword in game_title_lower:
-                                            logger.info(f"Match de alerta privado! Usuário: {alert.chat_id}, Keyword: {alert.keyword}, Jogo: {offer.game.title}")
-                                            success_dm = await send_telegram_alert(
-                                                game_title=offer.game.title,
-                                                current_price=offer.current_price,
-                                                historical_low=offer.historical_low,
-                                                store_name=offer.store_name,
-                                                deal_url=offer.deal_url,
-                                                chat_id=alert.chat_id
-                                            )
-                                            if success_dm:
-                                                dm_alerts_sent += 1
+                                # Verifica matches para cada alerta
+                                for alert in user_alerts:
+                                    if alert.keyword in game_title_lower:
+                                        logger.info(f"Match de alerta privado! Usuário: {alert.chat_id}, Keyword: {alert.keyword}, Jogo: {offer.game.title}")
+                                        success_dm = await send_telegram_alert(
+                                            game_title=offer.game.title,
+                                            current_price=offer.current_price,
+                                            historical_low=offer.historical_low,
+                                            store_name=offer.store_name,
+                                            deal_url=offer.deal_url,
+                                            chat_id=alert.chat_id
+                                        )
+                                        if success_dm:
+                                            dm_alerts_sent += 1
 
                         logger.info("Processamento de alertas privados finalizado.")
                     except Exception as alert_error:
@@ -446,7 +427,7 @@ async def sync_games():
             f"🔗 APIs Utilizadas: {apis_str}\n"
             f"🏪 Lojas Processadas: {stores_str}\n"
             f"📥 Ofertas processadas: {total_processed_offers}\n"
-            f"✨ Novas de Elite inseridas: {new_elite_offers}\n"
+            f"✨ Novas ofertas notificadas: {new_offers_notified}\n"
             f"🔔 Alertas disparados na DM: {dm_alerts_sent}\n"
             f"🟢 Status do Banco: {db_status}"
         )

@@ -26,9 +26,6 @@ async def manual_sync(request: Request):
 
 @router.get("/giveaways", response_model=List[GameResponse])
 async def get_giveaways(request: Request, db: AsyncSession = Depends(get_db)):
-    # Find games that have at least one active offer with current_price == 0
-    # Or based on our previous logic where giveaways are specifically marked.
-    # Now we have offers. We should return games that have at least one active offer with price 0.
     stmt = (
         select(Game)
         .join(Game.offers)
@@ -41,48 +38,23 @@ async def get_giveaways(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/deals/best", response_model=List[GameResponse])
 async def get_best_deals(request: Request, db: AsyncSession = Depends(get_db)):
     """
-    Retorna as 15 melhores ofertas baseadas no Deal Score e Metacritic >= 75.
+    Retorna as 15 melhores ofertas baseadas em Metacritic >= 75 ou maior desconto.
     """
-    # Lógica de cálculo do Deal Score (baseada no alert_service.py)
-    # 7 pontos pelo desconto + 3 pontos se for o menor preço histórico
-    discount_score = case(
-        (GameOffer.current_price == 0, 7.0),
-        (GameOffer.original_price > 0, (1.0 - (GameOffer.current_price / GameOffer.original_price)) * 7.0),
+    # Cálculo de percentual de desconto para ordenação fallback
+    discount_percent = case(
+        (GameOffer.original_price > 0, (1.0 - (GameOffer.current_price / GameOffer.original_price))),
         else_=0.0
     )
-    historical_low_score = case(
-        (GameOffer.current_price <= GameOffer.historical_low, 3.0),
-        else_=0.0
-    )
-    deal_score = discount_score + historical_low_score
 
     stmt = (
         select(Game)
         .join(Game.offers)
         .where(
             GameOffer.is_active == True,
-            ~GameOffer.deal_url.ilike("%gamerpower.com%"),
-            ~Game.title.ilike("%DLC%"),
-            ~Game.title.ilike("%Expansion%"),
-            ~Game.title.ilike("%Pack%"),
-            ~Game.title.ilike("%Gift%"),
-            ~Game.title.ilike("%Promo Code%"),
-            ~Game.title.ilike("%Pass%"),
-            ~Game.title.ilike("%Soundtrack%"),
-            ~Game.title.ilike("%Artbook%"),
-            ~Game.title.ilike("%Art Book%"),
-            ~Game.title.ilike("%Ost%"),
-            ~Game.title.ilike("%Add-On%"),
-            ~Game.title.ilike("%Addon%"),
-            ~Game.title.ilike("%Bundle%"),
-            ~Game.title.ilike("%Collection%"),
-            or_(
-                Game.metacritic_score >= 75,
-                deal_score >= 8.0
-            )
+            Game.metacritic_score >= 75
         )
         .group_by(Game.id)
-        .order_by(func.max(deal_score).desc())
+        .order_by(func.max(discount_percent).desc(), Game.metacritic_score.desc())
         .limit(15)
     )
 
@@ -91,9 +63,6 @@ async def get_best_deals(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/deals", response_model=List[GameResponse])
 async def get_deals(request: Request, db: AsyncSession = Depends(get_db)):
-    # Return games that have at least one active offer.
-    # Sorted by the most recent update date in descending order.
-
     stmt = (
         select(Game)
         .join(Game.offers)
@@ -107,7 +76,6 @@ async def get_deals(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/games/{title}/audit", response_model=List[GameAuditResponse])
 async def audit_game(request: Request, title: str, db: AsyncSession = Depends(get_db)):
-    # Find game in DB by title
     result = await db.execute(
         select(Game).where(Game.title.ilike(f"%{title}%"))
     )

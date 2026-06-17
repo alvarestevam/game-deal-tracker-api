@@ -11,7 +11,6 @@ from app.core.config import settings
 from app.models.game import Game, GameOffer
 from app.models.user_alert import UserAlert
 from app.schemas.telegram import TelegramUpdate
-from app.services.alert_service import calculate_deal_score
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -135,12 +134,11 @@ async def telegram_webhook(update: TelegramUpdate, db: AsyncSession = Depends(ge
 
                 async with httpx.AsyncClient() as client:
                     for offer in offers:
-                        score = calculate_deal_score(offer.game, offer)
                         price_str = "GRÁTIS" if offer.current_price == 0 else f"R$ {offer.current_price:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                         msg = (
                             f'<a href="{offer.deal_url}">&#8203;</a>'
                             f"🎮 <b>{offer.game.title}</b>\n"
-                            f"💰 Preço: {price_str} | ⭐ Nota: {score}/10\n"
+                            f"💰 Preço: {price_str}\n"
                             f"🏪 Loja: {offer.store_name}"
                         )
 
@@ -191,7 +189,7 @@ async def telegram_webhook(update: TelegramUpdate, db: AsyncSession = Depends(ge
                 new_alert = UserAlert(chat_id=chat_id, keyword=term.lower())
                 db.add(new_alert)
                 await db.commit()
-                message = f"🔔 Alerta criado! Vou te avisar na DM assim que '<b>{term}</b>' entrar em promoção de elite."
+                message = f"🔔 Alerta criado! Vou te avisar na DM assim que '<b>{term}</b>' entrar em promoção."
 
         payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
         async with httpx.AsyncClient() as client:
@@ -223,21 +221,13 @@ async def telegram_webhook(update: TelegramUpdate, db: AsyncSession = Depends(ge
             select(GameOffer)
             .options(selectinload(GameOffer.game))
             .where(GameOffer.is_active == True, GameOffer.store_name.ilike(f"%{target_store}%"))
+            .order_by(desc(GameOffer.updated_at))
+            .limit(15)
         )
         result = await db.execute(stmt)
         offers = result.scalars().all()
 
-        # Calculate scores and sort
-        scored_offers = []
-        for offer in offers:
-            score = calculate_deal_score(offer.game, offer)
-            scored_offers.append((offer, score))
-
-        # Sort by score descending and limit 15
-        scored_offers.sort(key=lambda x: x[1], reverse=True)
-        top_offers = scored_offers[:15]
-
-        if not top_offers:
+        if not offers:
             message = f"Nenhuma oferta ativa encontrada para <b>{target_store}</b> no momento."
             payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True}
             async with httpx.AsyncClient() as client:
@@ -250,12 +240,13 @@ async def telegram_webhook(update: TelegramUpdate, db: AsyncSession = Depends(ge
 
             # Envia cada oferta individualmente com botão inline
             async with httpx.AsyncClient() as client:
-                for offer, score in top_offers:
+                for offer in offers:
                     price_str = "GRÁTIS" if offer.current_price == 0 else f"R$ {offer.current_price:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                     msg = (
                         f'<a href="{offer.deal_url}">&#8203;</a>'
                         f"🎮 <b>{offer.game.title}</b>\n"
-                        f"💰 Preço: {price_str} | ⭐ Nota: {score}/10"
+                        f"💰 Preço: {price_str}\n"
+                        f"🏪 Loja: {offer.store_name}"
                     )
 
                     button_text = "🎁 Resgatar Jogo" if offer.current_price == 0 else "▶️ Ir para a Oferta"
