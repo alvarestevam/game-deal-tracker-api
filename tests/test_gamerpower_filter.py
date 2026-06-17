@@ -32,5 +32,8 @@ async def test_gamerpower_type_filter():
 
             deals = await client.get_pc_giveaways()
 
-            assert len(deals) == 1
+            # Now returns all items, filtering is handled by the sync service
+            assert len(deals) == 3
             assert deals[0].title == "Real Game"
+            assert deals[1].title == "Some DLC"
+            assert deals[2].title == "Some Loot"

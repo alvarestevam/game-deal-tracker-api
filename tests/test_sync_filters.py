@@ -5,67 +5,59 @@ from app.schemas.game_deal import GameDealSchema
 import httpx
 
 @pytest.mark.asyncio
-async def test_validation_stage1_native_type():
+async def test_store_whitelist_validation():
     client = AsyncMock(spec=httpx.AsyncClient)
-    # Valid native type
-    item_ok = GameDealSchema(title="Valid Game", sale_price=0, store="Steam", url="http", native_type="game")
+
+    # Valid elite stores
+    assert await _is_valid_deal(GameDealSchema(title="Game 1", sale_price=10.0, store="Steam", url="http"), client) is True
+    assert await _is_valid_deal(GameDealSchema(title="Game 2", sale_price=10.0, store="Epic Games Store", url="http"), client) is True
+    assert await _is_valid_deal(GameDealSchema(title="Game 3", sale_price=10.0, store="GOG", url="http"), client) is True
+    assert await _is_valid_deal(GameDealSchema(title="Game 4", sale_price=10.0, store="Nuuvem", url="http"), client) is True
+
+    # Invalid stores
+    assert await _is_valid_deal(GameDealSchema(title="Game 5", sale_price=10.0, store="Itch.io", url="http"), client) is False
+    assert await _is_valid_deal(GameDealSchema(title="Game 6", sale_price=10.0, store="IndieGala", url="http"), client) is False
+
+@pytest.mark.asyncio
+async def test_giveaway_price_barrier():
+    client = AsyncMock(spec=httpx.AsyncClient)
+
+    # Giveaway with original price >= 20.00
+    item_ok = GameDealSchema(title="Good Giveaway", sale_price=0.0, original_price=25.0, store="Steam", url="http")
     assert await _is_valid_deal(item_ok, client) is True
 
-    # Invalid native type
-    item_bad = GameDealSchema(title="DLC Pack", sale_price=0, store="Steam", url="http", native_type="DLC")
+    # Giveaway with original price < 20.00
+    item_bad = GameDealSchema(title="Cheap Giveaway", sale_price=0.0, original_price=15.0, store="Steam", url="http")
     assert await _is_valid_deal(item_bad, client) is False
 
+    # Giveaway with missing original price (defaults to 0.0)
+    item_missing = GameDealSchema(title="Unknown Giveaway", sale_price=0.0, store="Steam", url="http")
+    assert await _is_valid_deal(item_missing, client) is False
+
 @pytest.mark.asyncio
-async def test_validation_stage2_steam_api():
-    # Missing native_type, has steam_appid
-    item = GameDealSchema(title="Steam Game", sale_price=0, store="Steam", url="http", steam_appid="123")
+async def test_type_exclusion_rules():
     client = AsyncMock(spec=httpx.AsyncClient)
 
-    # Mocking Steam API response for DLC
+    # Blocked native types
+    assert await _is_valid_deal(GameDealSchema(title="DLC", sale_price=10.0, store="Steam", url="http", native_type="dlc"), client) is False
+    assert await _is_valid_deal(GameDealSchema(title="Music", sale_price=10.0, store="Steam", url="http", native_type="music"), client) is False
+
+    # Blocked Steam types
+    item_steam = GameDealSchema(title="Steam Item", sale_price=10.0, store="Steam", url="http", steam_appid="123")
     mock_resp = MagicMock()
     mock_resp.status_code = 200
-    mock_resp.json.return_value = {"123": {"success": True, "data": {"type": "dlc"}}}
+    mock_resp.json.return_value = {"123": {"success": True, "data": {"type": "hardware"}}}
     client.get.return_value = mock_resp
+    assert await _is_valid_deal(item_steam, client) is False
 
-    assert await _is_valid_deal(item, client) is False
+@pytest.mark.asyncio
+async def test_trust_rule_logic():
+    client = AsyncMock(spec=httpx.AsyncClient)
 
-    # Mocking Steam API response for Game
-    mock_resp.json.return_value = {"123": {"success": True, "data": {"type": "game"}}}
+    # No native_type, no steam_appid, but valid store and price
+    item = GameDealSchema(title="Trusted Game", sale_price=10.0, store="Steam", url="http")
     assert await _is_valid_deal(item, client) is True
 
-@pytest.mark.asyncio
-async def test_validation_stage3_blacklist_and_regex():
-    client = AsyncMock(spec=httpx.AsyncClient)
-    # Blacklisted store
-    item_store = GameDealSchema(title="Some Game", sale_price=0, store="Itch.io", url="http")
-    assert await _is_valid_deal(item_store, client) is False
-
-    # Regex title: giveaway suffix
-    item_regex1 = GameDealSchema(title="Cool Game giveaway", sale_price=0, store="Steam", url="http")
-    assert await _is_valid_deal(item_regex1, client) is False
-
-    # Regex title: dlc suffix
-    item_regex2 = GameDealSchema(title="Cool Game DLC", sale_price=0, store="Steam", url="http")
-    assert await _is_valid_deal(item_regex2, client) is False
-
-    # Regex title: indiegala tag
-    item_regex3 = GameDealSchema(title="Cool Game (indiegala)", sale_price=0, store="Steam", url="http")
-    assert await _is_valid_deal(item_regex3, client) is False
-
-    # Valid game passes stage 3
-    item_valid = GameDealSchema(title="Cyberpunk 2077", sale_price=0, store="Steam", url="http")
-    assert await _is_valid_deal(item_valid, client) is True
-
-@pytest.mark.asyncio
-async def test_validation_stage2_to_stage3_flow():
-    # Jogo no Steam, mas com "giveaway" no título.
-    # Stage 2 deve aprovar (ou não descartar), Stage 3 deve barrar.
-    item = GameDealSchema(title="Valid Steam Game giveaway", sale_price=0, store="Steam", url="http", steam_appid="123")
-    client = AsyncMock(spec=httpx.AsyncClient)
-
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = {"123": {"success": True, "data": {"type": "game"}}}
-    client.get.return_value = mock_resp
-
-    assert await _is_valid_deal(item, client) is False # Deve ser barrado pelo Stage 3 (regex)
+    # No native_type, no steam_appid, but invalid store
+    item_bad_store = GameDealSchema(title="Untrusted Store", sale_price=10.0, store="Unknown", url="http")
+    assert await _is_valid_deal(item_bad_store, client) is False
