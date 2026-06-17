@@ -11,10 +11,10 @@ async def test_store_whitelist_validation():
     # Valid elite stores
     assert await _is_valid_deal(GameDealSchema(title="Game 1", sale_price=10.0, store="Steam", url="http"), client) is True
     assert await _is_valid_deal(GameDealSchema(title="Game 2", sale_price=10.0, store="Epic Games Store", url="http"), client) is True
-    assert await _is_valid_deal(GameDealSchema(title="Game 3", sale_price=10.0, store="GOG", url="http"), client) is True
     assert await _is_valid_deal(GameDealSchema(title="Game 4", sale_price=10.0, store="Nuuvem", url="http"), client) is True
 
     # Invalid stores
+    assert await _is_valid_deal(GameDealSchema(title="Game 3", sale_price=10.0, store="GOG", url="http"), client) is False
     assert await _is_valid_deal(GameDealSchema(title="Game 5", sale_price=10.0, store="Itch.io", url="http"), client) is False
     assert await _is_valid_deal(GameDealSchema(title="Game 6", sale_price=10.0, store="IndieGala", url="http"), client) is False
 
