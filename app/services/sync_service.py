@@ -20,35 +20,38 @@ from app.schemas.game_deal import GameDealSchema
 
 logger = logging.getLogger(__name__)
 
-GARBAGE_PATTERNS = [
-    r"(?i)(\s*giveaway)$",               # Termina com 'giveaway'
-    r"(?i)(\(indiegala\)|\(itch\.io\)|\(stove\))", # Tags de lojas menores no título
-    r"(?i)(-\s*dlc|\s+dlc)$",            # Termina com 'DLC'
-    r"(?i)(-\s*expansion|\s+expansion)$",# Termina com 'Expansion'
-    r"(?i)(-\s*soundtrack|\s+soundtrack)$", # Termina com 'Soundtrack'
-    r"(?i)(pass)$",                      # Termina com 'Pass'
-    r"(?i)(pack)$",                      # Termina com 'Pack'
-    r"(?i)(complete\s+the\s+set)$"       # Bundle específico
-]
-
-STORE_BLACKLIST = ["Itch.io", "DRM-Free", "PC"]
+ELITE_STORES = ["steam", "epic games", "gog", "prime gaming", "green man gaming", "gamesplanet", "nuuvem"]
+BLOCKED_TYPES = ["dlc", "music", "advertising", "hardware"]
 
 async def _is_valid_deal(item: GameDealSchema, client: httpx.AsyncClient) -> bool:
     """
-    Pipeline de validação em 3 etapas:
-    1. Verificação do type Nativo
-    2. Consulta à API da Steam (Fallback por steamAppID)
-    3. Contingência por Regex e Blacklist de Lojas
+    Pipeline de validação heurística:
+    1. Whitelist de Lojas (Nível A)
+    2. Barreira Econômica para Giveaways (> R$ 20)
+    3. Filtro de Tipagem (DLCs, Music, etc.)
+    4. Regra de Confiança (Fallback)
     """
-    # Etapa 1: Verificação do type Nativo
-    if item.native_type:
-        valid_types = ["game", "full_game", "Game"]
-        if item.native_type not in valid_types:
-            logger.info(f"Discarding {item.title}: Native type '{item.native_type}' is not a game.")
+    # 1. Whitelist de Lojas (Elite Stores)
+    store_lower = item.store.lower() if item.store else ""
+    if not any(elite in store_lower for elite in ELITE_STORES):
+        logger.info(f"Discarding {item.title}: Store '{item.store}' is not in elite whitelist.")
+        return False
+
+    # 2. Barreira Econômica para Giveaways
+    if item.sale_price == 0 or item.is_giveaway:
+        original_price = item.original_price or 0.0
+        if original_price < 20.00:
+            logger.info(f"Discarding giveaway {item.title}: Original price {original_price} is below barrier (20.00).")
             return False
 
-    # Etapa 2: Consulta à API da Steam (Fallback por steamAppID)
-    if not item.native_type and item.steam_appid and item.steam_appid != "0":
+    # 3. Filtro de Tipagem (Nativo)
+    if item.native_type:
+        if item.native_type.lower() in BLOCKED_TYPES:
+            logger.info(f"Discarding {item.title}: Native type '{item.native_type}' is blocked.")
+            return False
+
+    # 4. Filtro de Tipagem (Fallback Steam API)
+    if item.steam_appid and item.steam_appid != "0":
         try:
             url = f"https://store.steampowered.com/api/appdetails?appids={item.steam_appid}"
             headers = {"User-Agent": "GameDealTracker/1.0 (contato@teste.com)"}
@@ -58,23 +61,13 @@ async def _is_valid_deal(item: GameDealSchema, client: httpx.AsyncClient) -> boo
                 app_data = data.get(str(item.steam_appid))
                 if app_data and app_data.get("success"):
                     steam_type = app_data.get("data", {}).get("type")
-                    if steam_type in ["dlc", "music", "advertising", "series"]:
+                    if steam_type in BLOCKED_TYPES:
                         logger.info(f"Discarding {item.title}: Steam type '{steam_type}' is blocked.")
                         return False
-                    # Se for "game", removemos o return True antecipado para garantir que passe pela Etapa 3
         except Exception as e:
             logger.warning(f"Error checking Steam API for {item.title} ({item.steam_appid}): {str(e)}")
 
-    # Etapa 3: Contingência por Regex e Blacklist de Lojas (Fallback Final)
-    if item.store in STORE_BLACKLIST:
-        logger.info(f"Discarding {item.title}: Store '{item.store}' is blacklisted.")
-        return False
-
-    for pattern in GARBAGE_PATTERNS:
-        if re.search(pattern, item.title):
-            logger.info(f"Discarding {item.title}: Title matches garbage pattern '{pattern}'.")
-            return False
-
+    # 5. Regra de Confiança: Se passou pelos filtros acima, é aprovado
     return True
 
 def _sanitize_steam_image_url(image_url: str | None) -> str | None:

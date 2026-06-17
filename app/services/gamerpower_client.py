@@ -1,5 +1,6 @@
 import httpx
 import logging
+import re
 from datetime import datetime
 from typing import List
 from app.core.config import settings
@@ -28,9 +29,14 @@ class GamerPowerClient:
 
                 result = []
                 for item in giveaways:
-                    # Filtro estrito: processa apenas itens do tipo "Game"
-                    if item.get("type") != "Game":
-                        continue
+                    worth_str = item.get("worth", "0.0")
+                    original_price = 0.0
+                    if worth_str and worth_str != "N/A":
+                        try:
+                            # Extrai apenas números e ponto (ex: "$24.99" -> 24.99)
+                            original_price = float(re.sub(r'[^\d.]', '', worth_str))
+                        except (ValueError, TypeError):
+                            original_price = 0.0
 
                     published_date_str = item.get("published_date")
                     end_date_str = item.get("end_date")
@@ -52,7 +58,7 @@ class GamerPowerClient:
                     result.append(
                         GameDealSchema(
                             title=item.get("title", "Unknown"),
-                            original_price=None,
+                            original_price=original_price,
                             sale_price=0.0,
                             metacritic_score=None,
                             store=item.get("platforms", "Unknown"),
