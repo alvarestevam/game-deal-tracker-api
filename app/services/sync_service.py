@@ -20,7 +20,7 @@ from app.schemas.game_deal import GameDealSchema
 
 logger = logging.getLogger(__name__)
 
-ELITE_STORES = ["steam", "epic games", "gog", "prime gaming", "green man gaming", "gamesplanet", "nuuvem"]
+ELITE_STORES = ["steam", "epic games", "prime gaming", "green man gaming", "gamesplanet", "nuuvem"]
 BLOCKED_TYPES = ["dlc", "music", "advertising", "hardware"]
 
 async def _is_valid_deal(item: GameDealSchema, client: httpx.AsyncClient) -> bool:
