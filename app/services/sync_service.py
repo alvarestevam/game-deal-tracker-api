@@ -16,8 +16,66 @@ from app.services.itad_client import ITADClient
 from app.services.alert_service import calculate_deal_score
 from app.services.telegram_service import send_telegram_alert
 from app.utils.text_utils import normalize_title
+from app.schemas.game_deal import GameDealSchema
 
 logger = logging.getLogger(__name__)
+
+GARBAGE_PATTERNS = [
+    r"(?i)(\s*giveaway)$",               # Termina com 'giveaway'
+    r"(?i)(\(indiegala\)|\(itch\.io\)|\(stove\))", # Tags de lojas menores no título
+    r"(?i)(-\s*dlc|\s+dlc)$",            # Termina com 'DLC'
+    r"(?i)(-\s*expansion|\s+expansion)$",# Termina com 'Expansion'
+    r"(?i)(-\s*soundtrack|\s+soundtrack)$", # Termina com 'Soundtrack'
+    r"(?i)(pass)$",                      # Termina com 'Pass'
+    r"(?i)(pack)$",                      # Termina com 'Pack'
+    r"(?i)(complete\s+the\s+set)$"       # Bundle específico
+]
+
+STORE_BLACKLIST = ["Itch.io", "DRM-Free", "PC"]
+
+async def _is_valid_deal(item: GameDealSchema, client: httpx.AsyncClient) -> bool:
+    """
+    Pipeline de validação em 3 etapas:
+    1. Verificação do type Nativo
+    2. Consulta à API da Steam (Fallback por steamAppID)
+    3. Contingência por Regex e Blacklist de Lojas
+    """
+    # Etapa 1: Verificação do type Nativo
+    if item.native_type:
+        valid_types = ["game", "full_game", "Game"]
+        if item.native_type not in valid_types:
+            logger.info(f"Discarding {item.title}: Native type '{item.native_type}' is not a game.")
+            return False
+
+    # Etapa 2: Consulta à API da Steam (Fallback por steamAppID)
+    if not item.native_type and item.steam_appid and item.steam_appid != "0":
+        try:
+            url = f"https://store.steampowered.com/api/appdetails?appids={item.steam_appid}"
+            headers = {"User-Agent": "GameDealTracker/1.0 (contato@teste.com)"}
+            response = await client.get(url, headers=headers, timeout=10.0)
+            if response.status_code == 200:
+                data = response.json()
+                app_data = data.get(str(item.steam_appid))
+                if app_data and app_data.get("success"):
+                    steam_type = app_data.get("data", {}).get("type")
+                    if steam_type in ["dlc", "music", "advertising", "series"]:
+                        logger.info(f"Discarding {item.title}: Steam type '{steam_type}' is blocked.")
+                        return False
+                    # Se for "game", removemos o return True antecipado para garantir que passe pela Etapa 3
+        except Exception as e:
+            logger.warning(f"Error checking Steam API for {item.title} ({item.steam_appid}): {str(e)}")
+
+    # Etapa 3: Contingência por Regex e Blacklist de Lojas (Fallback Final)
+    if item.store in STORE_BLACKLIST:
+        logger.info(f"Discarding {item.title}: Store '{item.store}' is blacklisted.")
+        return False
+
+    for pattern in GARBAGE_PATTERNS:
+        if re.search(pattern, item.title):
+            logger.info(f"Discarding {item.title}: Title matches garbage pattern '{pattern}'.")
+            return False
+
+    return True
 
 def _sanitize_steam_image_url(image_url: str | None) -> str | None:
     """
@@ -209,7 +267,7 @@ async def sync_games():
             external_apis.add("IsThereAnyDeal")
             total_processed_offers += len(itad_deals)
 
-        async with AsyncSessionLocal() as session:
+        async with httpx.AsyncClient() as http_client, AsyncSessionLocal() as session:
             # Teste de integridade do banco
             try:
                 await session.execute(text("SELECT 1"))
@@ -223,6 +281,9 @@ async def sync_games():
 
                 # Process giveaways
                 for item in giveaways:
+                    if not await _is_valid_deal(item, http_client):
+                        continue
+
                     processed_stores.add(item.store or "Unknown")
                     try:
                         async with session.begin_nested():
@@ -245,6 +306,9 @@ async def sync_games():
 
                 # Process deals
                 for item in deals:
+                    if not await _is_valid_deal(item, http_client):
+                        continue
+
                     store_name = item.store
                     if store_name == "1": store_name = "Steam"
                     processed_stores.add(store_name or "Unknown")
@@ -273,6 +337,9 @@ async def sync_games():
 
                 # Process ITAD deals
                 for item in itad_deals:
+                    if not await _is_valid_deal(item, http_client):
+                        continue
+
                     processed_stores.add(item.store or "Unknown")
                     try:
                         async with session.begin_nested():

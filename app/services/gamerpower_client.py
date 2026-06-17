@@ -61,7 +61,8 @@ class GamerPowerClient:
                             deal_id=str(item.get("id")) if item.get("id") else None,
                             promo_start_date=promo_start_date,
                             promo_end_date=promo_end_date,
-                            image_url=item.get("image", None)
+                            image_url=item.get("image", None),
+                            native_type=item.get("type")
                         )
                     )
                 return result
