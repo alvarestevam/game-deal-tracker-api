@@ -18,8 +18,8 @@ class ITADClient:
         Endpoint: /deals/v2
         """
         url = f"{self.base_url}/deals/v2"
-        # Usamos country=US para obter preços em dólar e converter no sync_service
-        params = {"key": self.api_key, "country": "US", "limit": 100}
+        # Usamos country=BR e currency=BRL para obter preços regionais nativos
+        params = {"key": self.api_key, "country": "BR", "currency": "BRL", "limit": 100}
 
         try:
             headers = {"User-Agent": "GameDealTracker/1.0 (contato@teste.com)"}
@@ -60,6 +60,11 @@ class ITADClient:
                         except (ValueError, TypeError):
                             pass
 
+                    # Tenta extrair o steam_appid de múltiplas fontes possíveis no payload v2
+                    steam_appid = item.get("appid") or item.get("ids", {}).get("steam")
+                    if steam_appid is not None:
+                        steam_appid = str(steam_appid)
+
                     result.append(GameDealSchema(
                         title=item.get("title", "Unknown"),
                         original_price=float(deal.get("regular", {}).get("amount", 0)),
@@ -71,7 +76,9 @@ class ITADClient:
                         historical_low=float(deal.get("historyLow", {}).get("amount", 0)),
                         promo_start_date=promo_start_date,
                         promo_end_date=promo_end_date,
-                        image_url=image_url
+                        image_url=image_url,
+                        native_type=item.get("type"),
+                        steam_appid=steam_appid
                     ))
                 return result
         except Exception as e:
