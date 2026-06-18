@@ -1,5 +1,6 @@
 import logging
 import httpx
+import asyncio
 import re
 import time
 from datetime import datetime, timezone
@@ -295,16 +296,32 @@ async def sync_games():
                     store_name = item.store
                     if store_name == "1": store_name = "Steam"
                     processed_stores.add(store_name or "Unknown")
+
+                    effective_rate = usd_rate
+                    # Fallback BRL para Steam
+                    if store_name == "Steam" and item.steam_appid:
+                        try:
+                            steam_url = f"https://store.steampowered.com/api/appdetails?appids={item.steam_appid}&cc=br&filters=price_overview"
+                            headers = {"User-Agent": "GameDealTracker/1.0 (contato@teste.com)"}
+                            response = await http_client.get(steam_url, headers=headers, timeout=10.0)
+                            if response.status_code == 200:
+                                data = response.json()
+                                steam_data = data.get(str(item.steam_appid), {}).get("data", {}).get("price_overview")
+                                if steam_data:
+                                    item.sale_price = steam_data.get("final", 0) / 100.0
+                                    item.original_price = steam_data.get("initial", 0) / 100.0
+                                    effective_rate = 1.0  # Já está em BRL
+                        except Exception as steam_err:
+                            logger.warning(f"Erro ao buscar preço regional Steam para {item.title}: {str(steam_err)}")
+
                     try:
-                        # Se for Steam na CheapShark, não converte (já vem em BRL)
-                        effective_rate = 1.0 if item.store in ("1", "Steam") else usd_rate
                         async with session.begin_nested():
                             await upsert_game(
                                 session,
                                 item.title,
                                 item.sale_price,
                                 item.sale_price == 0,
-                                item.store,
+                                store_name,
                                 item.url,
                                 item.promo_start_date,
                                 item.promo_end_date,
@@ -371,6 +388,7 @@ async def sync_games():
                         )
                         if success:
                             offer.notified_telegram = True
+                            await asyncio.sleep(2.5)
 
                     await session.commit()
                     logger.info("Processamento de notificações Telegram (Canal) finalizado.")
@@ -401,6 +419,7 @@ async def sync_games():
                                         )
                                         if success_dm:
                                             dm_alerts_sent += 1
+                                            await asyncio.sleep(2.5)
 
                         logger.info("Processamento de alertas privados finalizado.")
                     except Exception as alert_error:
