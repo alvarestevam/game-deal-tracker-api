@@ -336,7 +336,7 @@ async def sync_games():
                                 item.promo_start_date,
                                 item.promo_end_date,
                                 is_active=True,
-                                usd_rate=usd_rate,
+                                usd_rate=1.0, # ITAD now returns native BRL
                                 payload_historical_low=item.historical_low,
                                 image_url=item.image_url,
                                 metacritic_score=item.metacritic_score,
